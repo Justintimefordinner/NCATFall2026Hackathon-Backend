@@ -90,8 +90,8 @@ function LaborTimer({
       justifyContent: "space-between",
       gap: isKiosk ? "8px" : "18px",
       padding: isKiosk ? "5px 8px" : "16px 22px",
-      backgroundColor: "#101B2B",
-      border: "1px solid #34465B",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
       minWidth: isKiosk ? 0 : "300px",
       minHeight: isKiosk ? "52px" : "auto",
@@ -112,7 +112,7 @@ function LaborTimer({
     status: {
       fontSize: isKiosk ? "11px" : "14px",
       fontWeight: "600",
-      color: isLaborRunning ? "#22C55E" : "#FACC15",
+      color: isLaborRunning ? "#16A34A" : "#EA580C",
       whiteSpace: "nowrap",
     },
 
@@ -120,7 +120,7 @@ function LaborTimer({
     time: {
       fontSize: isKiosk ? "18px" : "27px",
       fontWeight: "bold",
-      color: "#FFFFFF",
+      color: "#18181B",
       fontVariantNumeric: "tabular-nums",
       lineHeight: 1.1,
       whiteSpace: "nowrap",
@@ -135,8 +135,8 @@ function LaborTimer({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: isLaborRunning ? "#7F1D1D" : "#14532D",
-      border: isLaborRunning ? "1px solid #EF4444" : "1px solid #22C55E",
+      backgroundColor: isLaborRunning ? "#DC2626" : "#16A34A",
+      border: isLaborRunning ? "1px solid #B91C1C" : "1px solid #15803D",
       borderRadius: "50%",
       color: "#FFFFFF",
       cursor: isProcessing ? "wait" : "pointer",
@@ -160,7 +160,7 @@ function LaborTimer({
         {/* TIMER ICON */}
         <Clock3
           size={isKiosk ? 19 : 26}
-          color={isLaborRunning ? "#22C55E" : "#FACC15"}
+          color={isLaborRunning ? "#16A34A" : "#EA580C"}
           style={{ flexShrink: 0 }}
         />
 

@@ -55,8 +55,8 @@ function InstructionViewer({ page, selectedStep }) {
       flex: 1,
       minWidth: 0,
       minHeight: 0,
-      backgroundColor: "#101B2B",
-      border: "1px solid #34465B",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
       padding: isKiosk ? "10px" : "24px",
       display: "flex",
@@ -70,7 +70,7 @@ function InstructionViewer({ page, selectedStep }) {
     title: {
       fontSize: isKiosk ? "16px" : "25px",
       fontWeight: "bold",
-      color: "#FFFFFF",
+      color: "#18181B",
       margin: 0,
       lineHeight: 1.2,
       flexShrink: 0,
@@ -91,8 +91,8 @@ function InstructionViewer({ page, selectedStep }) {
       flex: isKiosk ? 1.2 : 1.4,
       minWidth: 0,
       minHeight: 0,
-      backgroundColor: "#08111F",
-      border: "1px solid #009DFF",
+      backgroundColor: "#F9FAFB",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "6px" : "10px",
       overflow: "hidden",
       display: "flex",
@@ -111,7 +111,7 @@ function InstructionViewer({ page, selectedStep }) {
 
     // Missing image placeholder
     imagePlaceholder: {
-      color: "#94A3B8",
+      color: "#71717A",
       fontSize: isKiosk ? "11px" : "15px",
       textAlign: "center",
       padding: "12px",
@@ -134,7 +134,7 @@ function InstructionViewer({ page, selectedStep }) {
       display: "flex",
       alignItems: "center",
       gap: isKiosk ? "5px" : "10px",
-      color: "#00BFFF",
+      color: "#2563EB",
       fontSize: isKiosk ? "13px" : "21px",
       fontWeight: "bold",
       flexShrink: 0,
@@ -142,7 +142,7 @@ function InstructionViewer({ page, selectedStep }) {
 
     // Instruction text
     instructionText: {
-      color: "#FFFFFF",
+      color: "#18181B",
       fontSize: isKiosk ? "12px" : "18px",
       lineHeight: isKiosk ? 1.4 : 1.6,
       margin: 0,
@@ -155,13 +155,13 @@ function InstructionViewer({ page, selectedStep }) {
       gap: "6px",
       fontSize: isKiosk ? "10px" : "14px",
       fontWeight: "bold",
-      color: isSigned ? "#22C55E" : pendingInspector ? "#FACC15" : "#94A3B8",
+      color: isSigned ? "#16A34A" : pendingInspector ? "#EA580C" : "#71717A",
     },
 
     // Important information box
     note: {
-      backgroundColor: "#192B3D",
-      border: "1px solid #EAB308",
+      backgroundColor: "#FFF7ED",
+      border: "1px solid #FDBA74",
       borderRadius: isKiosk ? "6px" : "10px",
       padding: isKiosk ? "7px" : "18px",
       marginTop: isKiosk ? "4px" : "auto",
@@ -173,7 +173,7 @@ function InstructionViewer({ page, selectedStep }) {
       display: "flex",
       alignItems: "center",
       gap: isKiosk ? "5px" : "10px",
-      color: "#FACC15",
+      color: "#C2410C",
       fontSize: isKiosk ? "11px" : "18px",
       fontWeight: "bold",
       marginBottom: isKiosk ? "4px" : "10px",
@@ -181,7 +181,7 @@ function InstructionViewer({ page, selectedStep }) {
 
     // Note description
     noteText: {
-      color: "#E2E8F0",
+      color: "#57534E",
       fontSize: isKiosk ? "10px" : "15px",
       lineHeight: isKiosk ? 1.3 : 1.5,
       margin: 0,

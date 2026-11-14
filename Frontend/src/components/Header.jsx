@@ -29,8 +29,8 @@ function Header({ station, technician }) {
       height: isKiosk ? "42px" : "82px",
       minHeight: isKiosk ? "42px" : "82px",
       padding: isKiosk ? "0 10px" : "0 28px",
-      backgroundColor: "#111827",
-      borderBottom: "2px solid #38BDF8",
+      backgroundColor: "#FFFFFF",
+      borderBottom: "2px solid #E4E4E7",
       gap: isKiosk ? "8px" : "24px",
       overflow: "hidden",
     },
@@ -48,6 +48,7 @@ function Header({ station, technician }) {
       fontWeight: "bold",
       lineHeight: 1.1,
       whiteSpace: "nowrap",
+      color: "#18181B",
     },
 
     infoRow: {
@@ -64,25 +65,26 @@ function Header({ station, technician }) {
       gap: "5px",
       whiteSpace: "nowrap",
       fontSize: isKiosk ? "12px" : "15px",
+      color: "#3F3F46",
     },
 
     icon: {
       flexShrink: 0,
-      color: "#CBD5E1",
+      color: "#64748B",
     },
 
     demoBadge: {
       display: isKiosk ? "none" : "flex",
       alignItems: "center",
       gap: "7px",
-      color: "#E2E8F0",
+      color: "#71717A",
       fontSize: "14px",
     },
 
     demoDot: {
       width: "8px",
       height: "8px",
-      backgroundColor: "#4ADE80",
+      backgroundColor: "#16A34A",
       borderRadius: "50%",
     },
   };
@@ -118,7 +120,7 @@ function Header({ station, technician }) {
     <header style={styles.header}>
       {/* APPLICATION BRAND */}
       <div style={styles.brand}>
-        <Factory size={isKiosk ? 19 : 28} color="#38BDF8" />
+        <Factory size={isKiosk ? 19 : 28} color="#2563EB" />
 
         <h1 style={styles.title}>
           {isKiosk ? "Glorp MES" : "Glorp MES Work Instructions"}

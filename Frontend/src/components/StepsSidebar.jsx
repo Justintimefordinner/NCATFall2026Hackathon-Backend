@@ -43,8 +43,8 @@ function StepsSidebar({
     sidebar: {
       width: isKiosk ? "210px" : "310px",
       flexShrink: 0,
-      backgroundColor: "#101B2B",
-      border: "1px solid #34465B",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
       padding: isKiosk ? "8px" : "20px",
       display: "flex",
@@ -59,7 +59,7 @@ function StepsSidebar({
     title: {
       fontSize: isKiosk ? "15px" : "24px",
       fontWeight: "bold",
-      color: "#FFFFFF",
+      color: "#18181B",
       margin: 0,
       lineHeight: 1.2,
     },
@@ -67,7 +67,7 @@ function StepsSidebar({
     // Current page indicator
     pageIndicator: {
       fontSize: isKiosk ? "10px" : "15px",
-      color: "#9CAFC5",
+      color: "#71717A",
       fontWeight: "normal",
     },
 
@@ -90,10 +90,10 @@ function StepsSidebar({
       alignItems: "center",
       gap: isKiosk ? "7px" : "12px",
       padding: isKiosk ? "7px 8px" : "16px 14px",
-      backgroundColor: "#172437",
-      border: "1px solid #40536B",
+      backgroundColor: "#F9FAFB",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "6px" : "10px",
-      color: "#FFFFFF",
+      color: "#18181B",
       textAlign: "left",
       cursor: "pointer",
       fontSize: isKiosk ? "11px" : "15px",
@@ -103,25 +103,25 @@ function StepsSidebar({
 
     // Selected step appearance
     selectedStep: {
-      backgroundColor: "#0755A3",
-      border: "2px solid #00BFFF",
+      backgroundColor: "#EFF6FF",
+      border: "2px solid #2563EB",
     },
 
     // Completed step appearance
     completedStep: {
-      backgroundColor: "#10352C",
-      border: "1px solid #22C55E",
+      backgroundColor: "#F0FDF4",
+      border: "1px solid #16A34A",
     },
 
     // Waiting for inspector approval
     pendingStep: {
-      backgroundColor: "#3B2B10",
-      border: "1px solid #FACC15",
+      backgroundColor: "#FFF7ED",
+      border: "1px solid #EA580C",
     },
 
     // Inspector-required step
     inspectorStep: {
-      border: "1px solid #A78BFA",
+      border: "1px solid #8B5CF6",
     },
 
     // Step text
@@ -193,7 +193,12 @@ function StepsSidebar({
       ===================================== */}
       <div style={styles.stepsContainer}>
         {steps.length === 0 ? (
-          <p style={{ color: "#94A3B8", fontSize: "12px" }}>
+          <p
+            style={{
+              color: "#71717A",
+              fontSize: "12px",
+            }}
+          >
             No steps available.
           </p>
         ) : (
@@ -217,20 +222,20 @@ function StepsSidebar({
             // ========================================
 
             let StatusIcon = Circle;
-            let statusColor = "#CBD5E1";
+            let statusColor = "#A1A1AA";
             let statusText = null;
 
             if (isCompleted) {
               StatusIcon = CheckCircle2;
-              statusColor = "#22C55E";
+              statusColor = "#16A34A";
               statusText = "Signed Off";
             } else if (isPending) {
               StatusIcon = Clock3;
-              statusColor = "#FACC15";
+              statusColor = "#EA580C";
               statusText = "Pending Inspector";
             } else if (requiresInspector) {
               StatusIcon = ShieldAlert;
-              statusColor = "#A78BFA";
+              statusColor = "#8B5CF6";
               statusText = "Inspector Required";
             }
 

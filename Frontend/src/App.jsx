@@ -118,9 +118,9 @@ function App() {
       width: "100%",
       height: isKiosk ? "100dvh" : "auto",
       minHeight: isKiosk ? 0 : "100dvh",
-      backgroundColor: "#08111F",
-      color: "#FFFFFF",
-      fontFamily: "Arial, sans-serif",
+      backgroundColor: "#F9FAFB",
+      color: "#18181B",
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
       display: "flex",
       flexDirection: "column",
       overflow: isKiosk ? "hidden" : "visible",
@@ -129,8 +129,8 @@ function App() {
 
     // Backend connection warning
     connectionWarning: {
-      backgroundColor: "#7F1D1D",
-      color: "#FFFFFF",
+      backgroundColor: "#FEF2F2",
+      color: "#B91C1C",
       padding: isKiosk ? "4px 8px" : "10px 16px",
       fontSize: isKiosk ? "10px" : "13px",
       textAlign: "center",
@@ -141,15 +141,15 @@ function App() {
     loading: {
       width: "100%",
       height: "100dvh",
-      backgroundColor: "#08111F",
-      color: "#FFFFFF",
+      backgroundColor: "#F9FAFB",
+      color: "#18181B",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       gap: "12px",
       padding: "20px",
-      fontFamily: "Arial, sans-serif",
+      fontFamily: "ui-sans-serif, system-ui, sans-serif",
       textAlign: "center",
       boxSizing: "border-box",
     },
@@ -192,8 +192,8 @@ function App() {
       justifyContent: "center",
       minHeight: isKiosk ? "32px" : "44px",
       padding: isKiosk ? "5px 12px" : "12px 18px",
-      backgroundColor: "#7F1D1D",
-      border: "1px solid #EF4444",
+      backgroundColor: "#FEF2F2",
+      border: "1px solid #FECACA",
       borderRadius: isKiosk ? "6px" : "8px",
       color: "#FFFFFF",
       fontSize: isKiosk ? "11px" : "14px",
@@ -221,7 +221,7 @@ function App() {
 
         <p
           style={{
-            color: "#94A3B8",
+            color: "#71717A",
             fontSize: "14px",
             margin: 0,
           }}
@@ -233,7 +233,7 @@ function App() {
           <p
             role="alert"
             style={{
-              color: "#FCA5A5",
+              color: "#DC2626",
               fontSize: "13px",
               margin: 0,
             }}
@@ -339,9 +339,9 @@ function App() {
           style={{
             flexShrink: 0,
             padding: isKiosk ? "6px 8px" : "12px 20px",
-            backgroundColor: "#451A1A",
-            borderTop: "1px solid #EF4444",
-            borderBottom: "1px solid #EF4444",
+            backgroundColor: "#FEF2F2",
+            borderTop: "1px solid #FECACA",
+            borderBottom: "1px solid #FECACA",
             display: "flex",
             flexDirection: "column",
             gap: isKiosk ? "5px" : "10px",
@@ -355,7 +355,7 @@ function App() {
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              color: "#FCA5A5",
+              color: "#DC2626",
               fontSize: isKiosk ? "11px" : "14px",
               fontWeight: "bold",
               textAlign: "center",
@@ -373,8 +373,8 @@ function App() {
               width: "100%",
               minHeight: isKiosk ? "30px" : "44px",
               borderRadius: "7px",
-              border: "1px solid #EF4444",
-              backgroundColor: "#B91C1C",
+              border: "1px solid #FECACA",
+              backgroundColor: "#DC2626",
               color: "#FFFFFF",
               fontSize: isKiosk ? "11px" : "14px",
               fontWeight: "bold",

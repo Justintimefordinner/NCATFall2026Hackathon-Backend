@@ -87,8 +87,8 @@ function VoiceControl({
       minHeight: 0,
       height: isKiosk ? "52px" : "auto",
       padding: isKiosk ? "5px 8px" : "16px 20px",
-      backgroundColor: "#101B2B",
-      border: "1px solid #34465B",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
       overflow: "hidden",
       boxSizing: "border-box",
@@ -107,14 +107,14 @@ function VoiceControl({
     statusTitle: {
       fontSize: "12px",
       fontWeight: "bold",
-      color: "#FFFFFF",
+      color: "#18181B",
       whiteSpace: "nowrap",
     },
 
     // Listening status text
     statusText: {
       fontSize: "10px",
-      color: isListening ? "#4ADE80" : "#94A3B8",
+      color: isListening ? "#16A34A" : "#71717A",
     },
 
     // Microphone toggle button
@@ -126,9 +126,9 @@ function VoiceControl({
       minHeight: isKiosk ? "40px" : "auto",
       padding: isKiosk ? "7px 10px" : "14px 20px",
       borderRadius: isKiosk ? "7px" : "10px",
-      border: isListening ? "1px solid #00BFFF" : "1px solid #40536B",
-      backgroundColor: isListening ? "#0755A3" : "#1D2D42",
-      color: "#FFFFFF",
+      border: isListening ? "1px solid #1D4ED8" : "1px solid #D4D4D8",
+      backgroundColor: isListening ? "#2563EB" : "#F4F4F5",
+      color: isListening ? "#FFFFFF" : "#18181B",
       fontWeight: "bold",
       fontSize: isKiosk ? "11px" : "16px",
       cursor: isToggling ? "wait" : "pointer",
@@ -149,10 +149,10 @@ function VoiceControl({
     // Individual simulated command
     commandButton: {
       padding: "10px 14px",
-      backgroundColor: "#1D2D42",
-      border: "1px solid #40536B",
+      backgroundColor: "#F4F4F5",
+      border: "1px solid #E4E4E7",
       borderRadius: "24px",
-      color: "#FFFFFF",
+      color: "#18181B",
       fontSize: "13px",
       cursor: isListening ? "pointer" : "not-allowed",
       opacity: isListening ? 1 : 0.4,
@@ -161,7 +161,7 @@ function VoiceControl({
     // Backend feedback message
     feedback: {
       display: isKiosk ? "none" : "block",
-      color: "#9CAFC5",
+      color: "#71717A",
       fontSize: "13px",
       minWidth: "130px",
       maxWidth: "260px",
@@ -223,7 +223,7 @@ function VoiceControl({
                 : "Start Listening"}
         </span>
 
-        {isListening && !isKiosk && <AudioLines size={24} color="#38BDF8" />}
+        {isListening && !isKiosk && <AudioLines size={24} color="#BFDBFE" />}
       </button>
 
       {/* =====================================

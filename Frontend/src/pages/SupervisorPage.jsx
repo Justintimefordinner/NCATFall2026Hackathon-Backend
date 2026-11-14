@@ -95,8 +95,8 @@ function SupervisorPage() {
   const styles = {
     page: {
       minHeight: "100dvh",
-      backgroundColor: "#08111F",
-      color: "#FFFFFF",
+      backgroundColor: "#F9FAFB",
+      color: "#18181B",
       fontFamily: "Arial, sans-serif",
       padding: isCompact ? "12px" : "24px",
       boxSizing: "border-box",
@@ -117,7 +117,7 @@ function SupervisorPage() {
     },
 
     subtitle: {
-      color: "#94A3B8",
+      color: "#71717A",
       fontSize: "13px",
       marginTop: "5px",
     },
@@ -126,16 +126,16 @@ function SupervisorPage() {
       display: "flex",
       alignItems: "center",
       gap: "6px",
-      backgroundColor: "#1E293B",
-      border: "1px solid #334155",
-      color: "#FFFFFF",
+      backgroundColor: "#F4F4F5",
+      border: "1px solid #D4D4D8",
+      color: "#18181B",
       padding: "10px 14px",
       borderRadius: "8px",
       cursor: "pointer",
     },
 
     connection: {
-      color: connected ? "#22C55E" : "#EF4444",
+      color: connected ? "#16A34A" : "#DC2626",
       fontWeight: "bold",
       fontSize: "13px",
     },
@@ -148,8 +148,8 @@ function SupervisorPage() {
     },
 
     card: {
-      backgroundColor: "#111D30",
-      border: "1px solid #26364B",
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E4E4E7",
       borderRadius: "12px",
       padding: "16px",
       minWidth: 0,
@@ -170,7 +170,7 @@ function SupervisorPage() {
     },
 
     statLabel: {
-      color: "#94A3B8",
+      color: "#71717A",
       fontSize: "12px",
       marginBottom: "5px",
     },
@@ -182,7 +182,7 @@ function SupervisorPage() {
 
     progressTrack: {
       height: "10px",
-      backgroundColor: "#334155",
+      backgroundColor: "#E4E4E7",
       borderRadius: "10px",
       overflow: "hidden",
       marginTop: "12px",
@@ -191,7 +191,7 @@ function SupervisorPage() {
     progressFill: {
       height: "100%",
       width: `${progressPercent}%`,
-      backgroundColor: "#22C55E",
+      backgroundColor: "#16A34A",
       transition: "width 0.3s ease",
     },
 
@@ -202,7 +202,7 @@ function SupervisorPage() {
     checkpointTrack: {
       position: "relative",
       height: "12px",
-      backgroundColor: "#334155",
+      backgroundColor: "#E4E4E7",
       borderRadius: "999px",
       marginTop: "12px",
       overflow: "visible",
@@ -222,15 +222,15 @@ function SupervisorPage() {
       flexWrap: "wrap",
       marginTop: "13px",
       fontSize: "11px",
-      color: "#CBD5E1",
+      color: "#71717A",
     },
 
     input: {
       width: "100%",
       boxSizing: "border-box",
-      backgroundColor: "#08111F",
-      color: "#FFFFFF",
-      border: "1px solid #475569",
+      backgroundColor: "#F9FAFB",
+      color: "#18181B",
+      border: "1px solid #D4D4D8",
       borderRadius: "7px",
       padding: "10px",
       fontSize: "14px",
@@ -253,11 +253,11 @@ function SupervisorPage() {
     },
 
     dangerButton: {
-      backgroundColor: "#B91C1C",
+      backgroundColor: "#DC2626",
     },
 
     successButton: {
-      backgroundColor: "#15803D",
+      backgroundColor: "#16A34A",
     },
 
     logContainer: {
@@ -270,16 +270,16 @@ function SupervisorPage() {
 
     logEntry: {
       padding: "9px",
-      backgroundColor: "#08111F",
+      backgroundColor: "#F9FAFB",
       borderRadius: "6px",
-      border: "1px solid #26364B",
+      border: "1px solid #E4E4E7",
       fontSize: "12px",
     },
 
     feedback: {
       margin: "12px 0",
       padding: "10px",
-      backgroundColor: "#1E293B",
+      backgroundColor: "#EFF6FF",
       borderRadius: "7px",
       fontSize: "13px",
     },
@@ -472,7 +472,7 @@ function SupervisorPage() {
               <div
                 style={{
                   ...styles.statValue,
-                  color: labor.running ? "#22C55E" : "#FBBF24",
+                  color: labor.running ? "#16A34A" : "#EAB308",
                 }}
               >
                 {labor.running ? "RUNNING" : "STOPPED"}
@@ -520,10 +520,10 @@ function SupervisorPage() {
                   const approved =
                     step.signed && step.signed_by === "supervisor";
                   const color = approved
-                    ? "#22C55E"
+                    ? "#16A34A"
                     : pending
-                      ? "#EF4444"
-                      : "#FBBF24";
+                      ? "#DC2626"
+                      : "#EAB308";
                   const status = approved
                     ? "approved"
                     : pending
@@ -543,7 +543,7 @@ function SupervisorPage() {
                         height: isKiosk ? "15px" : "18px",
                         borderRadius: "50%",
                         backgroundColor: color,
-                        border: "3px solid #111D30",
+                        border: "3px solid #FFFFFF",
                         boxShadow: `0 0 0 1px ${color}`,
                         boxSizing: "border-box",
                         zIndex: 1,
@@ -594,7 +594,7 @@ function SupervisorPage() {
           />
 
           {pendingInspector.length === 0 ? (
-            <p style={{ color: "#94A3B8", fontSize: "13px" }}>
+            <p style={{ color: "#71717A", fontSize: "13px" }}>
               No pending inspector approvals.
             </p>
           ) : (
@@ -638,11 +638,11 @@ function SupervisorPage() {
             <div
               style={{
                 ...styles.logEntry,
-                borderColor: "#EF4444",
+                borderColor: "#DC2626",
                 marginBottom: "12px",
               }}
             >
-              <strong style={{ color: "#FCA5A5" }}>ACTIVE ALERT</strong>
+              <strong style={{ color: "#DC2626" }}>ACTIVE ALERT</strong>
               <p>{qualityAlert}</p>
 
               <button
@@ -659,7 +659,7 @@ function SupervisorPage() {
               </button>
             </div>
           ) : (
-            <p style={{ color: "#94A3B8", fontSize: "13px" }}>
+            <p style={{ color: "#71717A", fontSize: "13px" }}>
               No active quality alerts.
             </p>
           )}
@@ -696,7 +696,7 @@ function SupervisorPage() {
 
           <div style={styles.logContainer}>
             {commandLog.length === 0 ? (
-              <p style={{ color: "#94A3B8", fontSize: "13px" }}>
+              <p style={{ color: "#71717A", fontSize: "13px" }}>
                 No commands recorded yet.
               </p>
             ) : (
@@ -704,7 +704,7 @@ function SupervisorPage() {
                 <div key={`${entry.ts}-${index}`} style={styles.logEntry}>
                   <div
                     style={{
-                      color: entry.ok ? "#22C55E" : "#EF4444",
+                      color: entry.ok ? "#16A34A" : "#DC2626",
                       fontWeight: "bold",
                       marginBottom: "4px",
                     }}
@@ -714,7 +714,7 @@ function SupervisorPage() {
 
                   <div>{entry.input}</div>
 
-                  <div style={{ color: "#94A3B8", marginTop: "4px" }}>
+                  <div style={{ color: "#71717A", marginTop: "4px" }}>
                     {entry.message}
                   </div>
                 </div>
@@ -753,7 +753,7 @@ function SupervisorPage() {
             Demo Controls
           </h2>
 
-          <p style={{ color: "#94A3B8", fontSize: "13px" }}>
+          <p style={{ color: "#71717A", fontSize: "13px" }}>
             Reset the operation, labor timer, sign-offs, and quality alert for a
             fresh demonstration.
           </p>

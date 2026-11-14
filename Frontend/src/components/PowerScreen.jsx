@@ -54,8 +54,8 @@ function PowerScreen({ onPowerOn, connected }) {
       width: "100%",
       height: "100dvh",
       minHeight: 0,
-      backgroundColor: "#08111F",
-      color: "#FFFFFF",
+      backgroundColor: "#F9FAFB",
+      color: "#18181B",
       fontFamily: "Arial, sans-serif",
       display: "flex",
       flexDirection: "column",
@@ -84,7 +84,8 @@ function PowerScreen({ onPowerOn, connected }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "#0755A3",
+      backgroundColor: "#2563EB",
+      color: "#FFFFFF",
       borderRadius: "9px",
       flexShrink: 0,
     },
@@ -96,13 +97,13 @@ function PowerScreen({ onPowerOn, connected }) {
 
     brandSubtitle: {
       fontSize: isKiosk ? "9px" : "11px",
-      color: "#94A3B8",
+      color: "#71717A",
       marginTop: "4px",
     },
 
     standbyBadge: {
-      color: "#FACC15",
-      border: "1px solid #854D0E",
+      color: "#C2410C",
+      border: "1px solid #FDBA74",
       borderRadius: "20px",
       padding: "6px 12px",
       fontSize: "11px",
@@ -124,14 +125,14 @@ function PowerScreen({ onPowerOn, connected }) {
       width: isKiosk ? "104px" : "150px",
       height: isKiosk ? "104px" : "150px",
       borderRadius: "50%",
-      border: "3px solid #38BDF8",
-      backgroundColor: "#102D46",
-      color: "#38BDF8",
+      border: "3px solid #2563EB",
+      backgroundColor: "#EFF6FF",
+      color: "#2563EB",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: isPoweringOn ? "wait" : "pointer",
-      boxShadow: "0 0 35px rgba(56,189,248,0.18)",
+      boxShadow: "0 0 35px rgba(37,99,235,0.12)",
       opacity: isPoweringOn ? 0.65 : 1,
       touchAction: "manipulation",
     },
@@ -145,12 +146,12 @@ function PowerScreen({ onPowerOn, connected }) {
 
     description: {
       fontSize: isKiosk ? "12px" : "15px",
-      color: "#94A3B8",
+      color: "#71717A",
       textAlign: "center",
     },
 
     error: {
-      color: "#FCA5A5",
+      color: "#DC2626",
       fontSize: "12px",
       textAlign: "center",
     },
@@ -160,9 +161,9 @@ function PowerScreen({ onPowerOn, connected }) {
       alignItems: "center",
       justifyContent: "space-between",
       gap: "12px",
-      borderTop: "1px solid #34465B",
+      borderTop: "1px solid #E4E4E7",
       paddingTop: "12px",
-      color: "#94A3B8",
+      color: "#71717A",
       fontSize: isKiosk ? "10px" : "12px",
     },
   };
@@ -228,7 +229,7 @@ function PowerScreen({ onPowerOn, connected }) {
             display: "flex",
             alignItems: "center",
             gap: "6px",
-            color: connected ? "#4ADE80" : "#FACC15",
+            color: connected ? "#16A34A" : "#EA580C",
           }}
         >
           {!connected && <WifiOff size={14} />}

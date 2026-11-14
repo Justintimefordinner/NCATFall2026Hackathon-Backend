@@ -86,8 +86,8 @@ function NavigationBar({
       justifyContent: isKiosk ? "stretch" : "space-between",
       gap: isKiosk ? "6px" : "14px",
       padding: isKiosk ? "5px 8px" : "16px 20px",
-      backgroundColor: "#101B2B",
-      borderTop: "1px solid #34465B",
+      backgroundColor: "#FFFFFF",
+      borderTop: "1px solid #E4E4E7",
       height: isKiosk ? "52px" : "auto",
       minHeight: isKiosk ? "52px" : "auto",
       flexShrink: 0,
@@ -106,10 +106,10 @@ function NavigationBar({
       minHeight: isKiosk ? "40px" : "58px",
       height: isKiosk ? "40px" : "auto",
       padding: isKiosk ? "4px 6px" : "12px 20px",
-      border: "1px solid #40536B",
+      border: "1px solid #D4D4D8",
       borderRadius: isKiosk ? "6px" : "10px",
-      backgroundColor: "#1D2D42",
-      color: "#FFFFFF",
+      backgroundColor: "#F4F4F5",
+      color: "#18181B",
       fontSize: isKiosk ? "11px" : "15px",
       fontWeight: "600",
       cursor: "pointer",
@@ -120,14 +120,16 @@ function NavigationBar({
 
     // Primary action button
     primaryButton: {
-      backgroundColor: "#087CE8",
-      border: "1px solid #00BFFF",
+      backgroundColor: "#2563EB",
+      border: "1px solid #1D4ED8",
+      color: "#FFFFFF",
     },
 
     // Sign-off button
     signOffButton: {
-      backgroundColor: "#123D35",
-      border: "1px solid #22C55E",
+      backgroundColor: "#16A34A",
+      border: "1px solid #15803D",
+      color: "#FFFFFF",
     },
 
     // Disabled button appearance
@@ -142,7 +144,7 @@ function NavigationBar({
       flexDirection: "column",
       alignItems: "center",
       gap: "8px",
-      color: "#FFFFFF",
+      color: "#18181B",
       fontSize: "14px",
     },
 
@@ -156,11 +158,11 @@ function NavigationBar({
       width: "9px",
       height: "9px",
       borderRadius: "50%",
-      backgroundColor: "#52637A",
+      backgroundColor: "#D4D4D8",
     },
 
     activeDot: {
-      backgroundColor: "#00BFFF",
+      backgroundColor: "#2563EB",
     },
   };
 

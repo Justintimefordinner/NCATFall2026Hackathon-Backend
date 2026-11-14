@@ -61,11 +61,11 @@ function OperationInfo({ operation, currentPage }) {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      backgroundColor: "#142235",
+      backgroundColor: "#FFFFFF",
       padding: isKiosk ? "5px 10px" : "20px 28px",
-      color: "#FFFFFF",
+      color: "#18181B",
       gap: isKiosk ? "10px" : "24px",
-      borderBottom: "1px solid #34465B",
+      borderBottom: "1px solid #E4E4E7",
       height: isKiosk ? "48px" : "auto",
       minHeight: isKiosk ? "48px" : "auto",
       flexShrink: 0,
@@ -77,13 +77,13 @@ function OperationInfo({ operation, currentPage }) {
     section: {
       flex: isKiosk ? "0 1 auto" : 1,
       minWidth: 0,
-      borderRight: isKiosk ? "none" : "1px solid #3B536C",
+      borderRight: isKiosk ? "none" : "1px solid #E4E4E7",
       paddingRight: isKiosk ? "0" : "20px",
     },
 
     // Information labels
     label: {
-      color: "#9CAFC5",
+      color: "#71717A",
       fontSize: isKiosk ? "10px" : "13px",
       marginBottom: isKiosk ? "2px" : "6px",
       whiteSpace: "nowrap",
@@ -103,7 +103,7 @@ function OperationInfo({ operation, currentPage }) {
     progressTrack: {
       width: isKiosk ? "55px" : "180px",
       height: isKiosk ? "5px" : "10px",
-      backgroundColor: "#34465B",
+      backgroundColor: "#E4E4E7",
       borderRadius: "10px",
       overflow: "hidden",
     },
@@ -111,7 +111,7 @@ function OperationInfo({ operation, currentPage }) {
     // Progress bar fill
     progressFill: {
       height: "100%",
-      backgroundColor: "#00AFFF",
+      backgroundColor: "#16A34A",
       borderRadius: "10px",
       transition: "width 0.3s ease",
     },
