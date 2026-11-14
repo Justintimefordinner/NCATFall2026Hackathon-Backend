@@ -104,9 +104,53 @@ function App() {
 
   const pendingInspector = mesState?.pending_inspector ?? [];
 
-  const supervisorApprovalRequired = pendingInspector.length > 0;
-
+  // Keep pending approval in Flask; only hide its prompt while
+  // the technician reviews a different step.
   const pendingApproval = pendingInspector[0] ?? null;
+
+  const selectedPendingApproval =
+    pendingInspector.find(
+      (item) =>
+        Number(item.page) === Number(currentPage) &&
+        Number(item.step) === Number(selectedStep),
+    ) ?? null;
+
+  const supervisorApprovalRequired = Boolean(selectedPendingApproval);
+
+  // Any attempt to continue while approval is pending returns the
+  // technician to the blocked step instead of issuing the action.
+  const returnToPendingApproval = () => {
+    if (!pendingApproval) return false;
+
+    if (Number(pendingApproval.page) === Number(currentPage)) {
+      handleSelectStep(pendingApproval.step);
+    } else {
+      // Pending approval is on another page. Do not issue an
+      // unauthorized navigation; the backend remains authoritative.
+      console.warn("Pending supervisor approval is on another page.");
+    }
+    return true;
+  };
+
+  const handleGuardedPreviousPage = () => {
+    if (returnToPendingApproval()) return;
+    return handlePreviousPage();
+  };
+
+  const handleGuardedNextPage = () => {
+    if (returnToPendingApproval()) return;
+    return handleNextPage();
+  };
+
+  const handleGuardedSignOffStep = (step) => {
+    if (returnToPendingApproval()) return;
+    return handleSignOffStep(step);
+  };
+
+  const handleGuardedSignOffPage = () => {
+    if (returnToPendingApproval()) return;
+    return handleSignOffPage();
+  };
 
   // ========================================
   // STYLING
@@ -361,8 +405,8 @@ function App() {
               textAlign: "center",
             }}
           >
-            🔒 Supervisor Approval Required — Page {pendingApproval.page}, Step{" "}
-            {pendingApproval.step}
+            🔒 Supervisor Approval Required — Page{" "}
+            {selectedPendingApproval.page}, Step {selectedPendingApproval.step}
           </div>
 
           {/* SUPERVISOR BUTTON */}
@@ -394,10 +438,10 @@ function App() {
         currentPage={currentPage}
         totalPages={totalPages}
         selectedStep={selectedStep}
-        onPreviousPage={handlePreviousPage}
-        onNextPage={handleNextPage}
-        onSignOffStep={handleSignOffStep}
-        onSignOffPage={handleSignOffPage}
+        onPreviousPage={handleGuardedPreviousPage}
+        onNextPage={handleGuardedNextPage}
+        onSignOffStep={handleGuardedSignOffStep}
+        onSignOffPage={handleGuardedSignOffPage}
       />
     </div>
   );

@@ -327,7 +327,33 @@ export function MESProvider({ children }) {
   // Sends a text command through Flask's
   // existing parser and state machine.
 
+  // Keep pending supervisor approval authoritative in Flask.
+  // Reviewing a signed step is allowed, but continuing is not.
+  const blockForPendingApproval = () => {
+    const pending = mesState?.pending_inspector?.[0];
+    if (!pending) return null;
+
+    if (Number(pending.page) === Number(currentPage)) {
+      setSelectedStep(pending.step);
+    }
+
+    const message = `Supervisor approval required — Page ${pending.page}, Step ${pending.step}.`;
+    setFeedback(message);
+    return { ok: false, message };
+  };
+
   const sendCommand = (text) => {
+    const normalized = String(text).trim().toLowerCase();
+    const isContinuation =
+      /^(next page|previous page|page done|sign off page|sign off step)$/.test(
+        normalized,
+      ) || /^step\s+\d+\s+done$/.test(normalized);
+
+    if (isContinuation) {
+      const blocked = blockForPendingApproval();
+      if (blocked) return Promise.resolve(blocked);
+    }
+
     return postJSON("/api/command", {
       text,
       source: "debug",
