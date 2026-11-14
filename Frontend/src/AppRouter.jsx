@@ -4,11 +4,10 @@
 
 import React from "react";
 
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import App from "./App";
 import SupervisorPage from "./pages/SupervisorPage";
-import { useMES } from "./context/MESContext";
 
 // ========================================
 // ROUTER COMPONENT
@@ -19,59 +18,46 @@ function AppRouter() {
   // STYLING
   // ========================================
 
-  // No styling is required.
-  // The router only controls navigation.
+  // No styling is required here.
+  // Each page controls its own layout.
 
   // ========================================
   // STATE & LOGIC
   // ========================================
 
-  // Access supervisor lock state.
-  const { isSupervisorLocked } = useMES();
-
-  // Retrieve the current URL location.
-  const location = useLocation();
-
-  // Prevent access to the dashboard while locked.
-  const dashboardElement = isSupervisorLocked ? (
-    <Navigate to="/supervisor" replace />
-  ) : (
-    <App />
-  );
-
-  // Prevent opening the supervisor screen without
-  // an active authorization request.
-  const supervisorElement = isSupervisorLocked ? (
-    <SupervisorPage />
-  ) : (
-    <Navigate to="/" replace />
-  );
+  // The technician and supervisor dashboards
+  // are independent interfaces.
+  //
+  // Flask controls authorization for
+  // protected supervisor actions.
+  //
+  // React routing does not authorize users.
 
   // ========================================
   // RETURN / JSX
   // ========================================
 
   return (
-    <Routes location={location}>
+    <Routes>
       {/* =====================================
-          NORMAL DASHBOARD ROUTE
+          DEFAULT ROUTE
       ===================================== */}
-      <Route path="/" element={dashboardElement} />
+      <Route path="/" element={<Navigate to="/tech" replace />} />
 
       {/* =====================================
-          SUPERVISOR AUTHORIZATION ROUTE
+          TECHNICIAN DASHBOARD
       ===================================== */}
-      <Route path="/supervisor" element={supervisorElement} />
+      <Route path="/tech" element={<App />} />
+
+      {/* =====================================
+          SUPERVISOR DASHBOARD
+      ===================================== */}
+      <Route path="/supervisor" element={<SupervisorPage />} />
 
       {/* =====================================
           UNKNOWN ROUTES
       ===================================== */}
-      <Route
-        path="*"
-        element={
-          <Navigate to={isSupervisorLocked ? "/supervisor" : "/"} replace />
-        }
-      />
+      <Route path="*" element={<Navigate to="/tech" replace />} />
     </Routes>
   );
 }

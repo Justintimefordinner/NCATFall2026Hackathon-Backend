@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 // ========================================
 // DASHBOARD COMPONENT IMPORTS
@@ -30,13 +31,61 @@ import { useMES } from "./context/MESContext";
 
 function App() {
   // ========================================
+  // ROUTER NAVIGATION
+  // ========================================
+
+  const navigate = useNavigate();
+
+  // ========================================
   // RESPONSIVE SCREEN DETECTION
   // ========================================
 
   const { isMobile, isCompact, isSmallHeight } = useResponsive();
 
-  // Enable compact kiosk layout.
+  // Enable compact Raspberry Pi layout.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // SHARED BACKEND STATE & LOGIC
+  // ========================================
+
+  const {
+    // Backend connection state
+    mesState,
+    connected,
+    error,
+
+    // Manufacturing operation data
+    operation,
+    currentPage,
+    selectedStep,
+    completedSteps,
+    totalPages,
+    activePage,
+
+    // Labor and voice state
+    isLaborRunning,
+    elapsedSeconds,
+    isListening,
+    feedback,
+
+    // Labor commands
+    handleStartLabor,
+    handleStopLabor,
+
+    // Page navigation commands
+    handlePreviousPage,
+    handleNextPage,
+
+    // Step selection and sign-off
+    handleSelectStep,
+    handleSignOffStep,
+    handleSignOffPage,
+
+    // Voice controls
+    handleToggleListening,
+    handleVoiceCommand,
+  } = useMES();
 
   // ========================================
   // STYLING
@@ -54,6 +103,33 @@ function App() {
       display: "flex",
       flexDirection: "column",
       overflow: isKiosk ? "hidden" : "visible",
+      boxSizing: "border-box",
+    },
+
+    // Backend connection warning
+    connectionWarning: {
+      backgroundColor: "#7F1D1D",
+      color: "#FFFFFF",
+      padding: isKiosk ? "4px 8px" : "10px 16px",
+      fontSize: isKiosk ? "10px" : "13px",
+      textAlign: "center",
+      flexShrink: 0,
+    },
+
+    // Initial loading screen
+    loading: {
+      width: "100%",
+      height: "100dvh",
+      backgroundColor: "#08111F",
+      color: "#FFFFFF",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "12px",
+      fontFamily: "Arial, sans-serif",
+      textAlign: "center",
+      padding: "20px",
       boxSizing: "border-box",
     },
 
@@ -88,7 +164,7 @@ function App() {
       padding: isKiosk ? "0 8px 5px" : "0 20px 16px",
     },
 
-    // Supervisor authorization button
+    // Supervisor dashboard button
     supervisorButton: {
       display: "flex",
       alignItems: "center",
@@ -108,33 +184,41 @@ function App() {
   };
 
   // ========================================
-  // SHARED STATE & LOGIC
+  // INITIAL BACKEND LOADING STATE
   // ========================================
 
-  // Retrieve dashboard data and actions.
-  const {
-    operation,
-    currentPage,
-    selectedStep,
-    completedSteps,
-    totalPages,
-    activePage,
-    isLaborRunning,
-    elapsedSeconds,
-    isListening,
-    feedback,
+  // Wait until Flask provides the first
+  // manufacturing operation snapshot.
+  if (!mesState) {
+    return (
+      <div style={styles.loading}>
+        <h2 style={{ margin: 0 }}>Connecting to MES...</h2>
 
-    handleStartLabor,
-    handleStopLabor,
-    handlePreviousPage,
-    handleNextPage,
-    handleSelectStep,
-    handleSignOffStep,
-    handleSignOffPage,
-    handleToggleListening,
-    handleVoiceCommand,
-    requestSupervisor,
-  } = useMES();
+        <p
+          style={{
+            color: "#94A3B8",
+            fontSize: "14px",
+            margin: 0,
+          }}
+        >
+          Waiting for manufacturing operation data.
+        </p>
+
+        {error && (
+          <p
+            role="alert"
+            style={{
+              color: "#FCA5A5",
+              fontSize: "13px",
+              margin: 0,
+            }}
+          >
+            Connection error: {error}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   // ========================================
   // RETURN / JSX
@@ -142,6 +226,16 @@ function App() {
 
   return (
     <div style={styles.app}>
+      {/* =====================================
+          BACKEND CONNECTION WARNING
+      ===================================== */}
+      {!connected && (
+        <div style={styles.connectionWarning} role="alert">
+          MES live connection unavailable. Waiting for backend
+          synchronization...
+        </div>
+      )}
+
       {/* =====================================
           APPLICATION HEADER
       ===================================== */}
@@ -192,17 +286,15 @@ function App() {
       </div>
 
       {/* =====================================
-          SUPERVISOR AUTHORIZATION
+          SUPERVISOR DASHBOARD NAVIGATION
       ===================================== */}
       <div style={styles.supervisorRow}>
         <button
           type="button"
           style={styles.supervisorButton}
-          onClick={requestSupervisor}
+          onClick={() => navigate("/supervisor")}
         >
-          {isKiosk
-            ? "Supervisor Authorization"
-            : "Request Supervisor Authorization"}
+          {isKiosk ? "Supervisor Dashboard" : "Open Supervisor Dashboard"}
         </button>
       </div>
 

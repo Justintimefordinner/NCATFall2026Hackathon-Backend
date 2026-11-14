@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+
 import { Mic, MicOff, AudioLines } from "lucide-react";
 
 import { useResponsive } from "../hooks/useResponsive";
@@ -8,7 +9,7 @@ import { useResponsive } from "../hooks/useResponsive";
 // ========================================
 
 function VoiceControl({
-  isListening,
+  isListening = false,
   onToggleListening,
   onVoiceCommand,
   feedback,
@@ -21,6 +22,54 @@ function VoiceControl({
 
   // Enables the compact Raspberry Pi layout.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // LOCAL UI STATE
+  // ========================================
+
+  // Prevent repeated requests while toggling.
+  const [isToggling, setIsToggling] = useState(false);
+
+  // ========================================
+  // VOICE COMMAND TEST DATA
+  // ========================================
+
+  // These simulate recognized speech.
+  // They do not access the microphone.
+  const commands = [
+    { label: "Next page", value: "next page" },
+    { label: "Previous page", value: "previous page" },
+    { label: "Start labor", value: "start labor" },
+    { label: "Stop labor", value: "stop labor" },
+    { label: "Sign off step", value: "sign off step" },
+    { label: "Sign off page", value: "sign off page" },
+  ];
+
+  // ========================================
+  // EVENT HANDLERS
+  // ========================================
+
+  // Request the backend to toggle listening.
+  const handleToggleListening = async () => {
+    if (isToggling || !onToggleListening) return;
+
+    setIsToggling(true);
+
+    try {
+      await onToggleListening();
+    } catch (error) {
+      console.error("Failed to toggle voice listening:", error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  // Send a simulated voice command.
+  const handleSimulatedCommand = (command) => {
+    if (!isListening || !onVoiceCommand) return;
+
+    onVoiceCommand(command);
+  };
 
   // ========================================
   // STYLING
@@ -42,9 +91,10 @@ function VoiceControl({
       border: "1px solid #34465B",
       borderRadius: isKiosk ? "8px" : "12px",
       overflow: "hidden",
+      boxSizing: "border-box",
     },
 
-    // Voice assistant status container
+    // Compact status container
     status: {
       display: isKiosk ? "flex" : "none",
       flexDirection: "column",
@@ -61,7 +111,7 @@ function VoiceControl({
       whiteSpace: "nowrap",
     },
 
-    // Listening status
+    // Listening status text
     statusText: {
       fontSize: "10px",
       color: isListening ? "#4ADE80" : "#94A3B8",
@@ -81,12 +131,14 @@ function VoiceControl({
       color: "#FFFFFF",
       fontWeight: "bold",
       fontSize: isKiosk ? "11px" : "16px",
-      cursor: "pointer",
+      cursor: isToggling ? "wait" : "pointer",
       whiteSpace: "nowrap",
       flexShrink: 0,
+      opacity: isToggling ? 0.6 : 1,
+      touchAction: "manipulation",
     },
 
-    // Voice command controls
+    // Simulated command controls
     commands: {
       display: isKiosk ? "none" : "flex",
       alignItems: "center",
@@ -94,7 +146,7 @@ function VoiceControl({
       flexWrap: "wrap",
     },
 
-    // Individual simulated voice command
+    // Individual simulated command
     commandButton: {
       padding: "10px 14px",
       backgroundColor: "#1D2D42",
@@ -106,28 +158,16 @@ function VoiceControl({
       opacity: isListening ? 1 : 0.4,
     },
 
-    // Feedback message
+    // Backend feedback message
     feedback: {
       display: isKiosk ? "none" : "block",
       color: "#9CAFC5",
       fontSize: "13px",
       minWidth: "130px",
+      maxWidth: "260px",
+      overflowWrap: "break-word",
     },
   };
-
-  // ========================================
-  // LOGIC
-  // ========================================
-
-  // Example commands used to test our MES.
-  const commands = [
-    { label: "Next page", value: "next page" },
-    { label: "Previous page", value: "previous page" },
-    { label: "Start labor", value: "start labor" },
-    { label: "Stop labor", value: "stop labor" },
-    { label: "Sign off step", value: "sign off step" },
-    { label: "Sign off page", value: "sign off page" },
-  ];
 
   // ========================================
   // RETURN / JSX
@@ -137,26 +177,33 @@ function VoiceControl({
     <section style={styles.container}>
       {/* =====================================
           COMPACT VOICE STATUS
-          Visible only on small screens.
       ===================================== */}
       {isKiosk && (
         <div style={styles.status}>
           <span style={styles.statusTitle}>Voice Assistant</span>
 
           <span style={styles.statusText}>
-            {isListening ? "Listening" : "Not Listening"}
+            {isToggling
+              ? "Updating..."
+              : isListening
+                ? "Listening"
+                : "Not Listening"}
           </span>
         </div>
       )}
 
       {/* =====================================
-          MICROPHONE LISTENING TOGGLE
+          LISTENING TOGGLE
       ===================================== */}
       <button
         type="button"
         style={styles.microphoneButton}
-        onClick={onToggleListening}
+        onClick={handleToggleListening}
+        disabled={isToggling}
         aria-pressed={isListening}
+        aria-label={
+          isListening ? "Stop voice listening" : "Start voice listening"
+        }
       >
         {isListening ? (
           <Mic size={isKiosk ? 17 : 24} />
@@ -165,13 +212,15 @@ function VoiceControl({
         )}
 
         <span>
-          {isKiosk
-            ? isListening
-              ? "Stop"
-              : "Start"
-            : isListening
-              ? "Listening"
-              : "Start Listening"}
+          {isToggling
+            ? "Updating"
+            : isKiosk
+              ? isListening
+                ? "Stop"
+                : "Start"
+              : isListening
+                ? "Listening"
+                : "Start Listening"}
         </span>
 
         {isListening && !isKiosk && <AudioLines size={24} color="#38BDF8" />}
@@ -179,7 +228,7 @@ function VoiceControl({
 
       {/* =====================================
           SIMULATED VOICE COMMANDS
-          Desktop only.
+          Desktop development only
       ===================================== */}
       <div style={styles.commands}>
         {commands.map((command) => (
@@ -187,7 +236,7 @@ function VoiceControl({
             key={command.value}
             type="button"
             style={styles.commandButton}
-            onClick={() => onVoiceCommand(command.value)}
+            onClick={() => handleSimulatedCommand(command.value)}
             disabled={!isListening}
           >
             {command.label}
@@ -196,11 +245,10 @@ function VoiceControl({
       </div>
 
       {/* =====================================
-          COMMAND FEEDBACK
-          Desktop only.
+          BACKEND COMMAND FEEDBACK
       ===================================== */}
       <div style={styles.feedback} role="status" aria-live="polite">
-        {feedback}
+        {feedback || "Awaiting commands..."}
       </div>
     </section>
   );

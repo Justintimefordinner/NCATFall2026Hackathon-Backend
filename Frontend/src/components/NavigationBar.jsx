@@ -1,4 +1,9 @@
+// ========================================
+// IMPORTS
+// ========================================
+
 import React from "react";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useResponsive } from "../hooks/useResponsive";
+import { useMES } from "../context/MESContext";
 
 // ========================================
 // COMPONENT
@@ -29,6 +35,44 @@ function NavigationBar({
 
   // Enables the compact Raspberry Pi layout.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // LIVE BACKEND STATE
+  // ========================================
+
+  const { mesState } = useMES();
+
+  const laborRunning = mesState?.labor?.running === true;
+  const qualityAlert = mesState?.quality_alert ?? null;
+  const hasQualityAlert = Boolean(qualityAlert);
+
+  const steps = mesState?.page?.steps ?? [];
+
+  const activeStep = steps.find((step) => step.number === selectedStep);
+
+  // ========================================
+  // BUTTON AVAILABILITY
+  // ========================================
+
+  const isFirstPage = currentPage <= 1;
+  const isLastPage = currentPage >= totalPages;
+
+  const disablePrevious = isFirstPage || hasQualityAlert;
+  const disableNext = isLastPage || hasQualityAlert;
+
+  const disableSignStep =
+    !laborRunning ||
+    hasQualityAlert ||
+    selectedStep == null ||
+    !activeStep ||
+    activeStep.signed === true ||
+    activeStep.pending_inspector === true;
+
+  const disableSignPage =
+    !laborRunning ||
+    hasQualityAlert ||
+    steps.length === 0 ||
+    steps.every((step) => step.signed || step.pending_inspector);
 
   // ========================================
   // STYLING
@@ -121,14 +165,6 @@ function NavigationBar({
   };
 
   // ========================================
-  // LOGIC
-  // ========================================
-
-  // Determines whether navigation is available.
-  const isFirstPage = currentPage === 1;
-  const isLastPage = currentPage === totalPages;
-
-  // ========================================
   // RETURN / JSX
   // ========================================
 
@@ -141,10 +177,10 @@ function NavigationBar({
         type="button"
         style={{
           ...styles.button,
-          ...(isFirstPage ? styles.disabledButton : {}),
+          ...(disablePrevious ? styles.disabledButton : {}),
         }}
         onClick={onPreviousPage}
-        disabled={isFirstPage}
+        disabled={disablePrevious}
         aria-label="Previous page"
       >
         <ArrowLeft size={isKiosk ? 15 : 21} />
@@ -159,10 +195,10 @@ function NavigationBar({
         style={{
           ...styles.button,
           ...styles.signOffButton,
-          ...(selectedStep == null ? styles.disabledButton : {}),
+          ...(disableSignStep ? styles.disabledButton : {}),
         }}
         onClick={() => onSignOffStep(selectedStep)}
-        disabled={selectedStep == null}
+        disabled={disableSignStep}
         aria-label={
           selectedStep == null
             ? "No step selected"
@@ -170,7 +206,6 @@ function NavigationBar({
         }
       >
         <CheckCircle2 size={isKiosk ? 15 : 22} />
-
         {isKiosk ? "Sign Step" : `Sign Off Step ${selectedStep ?? ""}`}
       </button>
 
@@ -179,8 +214,12 @@ function NavigationBar({
       ===================================== */}
       <button
         type="button"
-        style={styles.button}
+        style={{
+          ...styles.button,
+          ...(disableSignPage ? styles.disabledButton : {}),
+        }}
         onClick={onSignOffPage}
+        disabled={disableSignPage}
         aria-label="Sign off entire page"
       >
         <ClipboardCheck size={isKiosk ? 15 : 21} />
@@ -189,8 +228,6 @@ function NavigationBar({
 
       {/* =====================================
           CURRENT PAGE INDICATOR
-          Hidden in kiosk mode because the
-          operation bar already shows it.
       ===================================== */}
       {!isKiosk && (
         <div style={styles.pageIndicator}>
@@ -220,10 +257,10 @@ function NavigationBar({
         style={{
           ...styles.button,
           ...styles.primaryButton,
-          ...(isLastPage ? styles.disabledButton : {}),
+          ...(disableNext ? styles.disabledButton : {}),
         }}
         onClick={onNextPage}
-        disabled={isLastPage}
+        disabled={disableNext}
         aria-label="Next page"
       >
         {isKiosk ? "Next" : "Next Page"}

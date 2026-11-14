@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+
 import { Play, Square, Clock3 } from "lucide-react";
 
 import { useResponsive } from "../hooks/useResponsive";
@@ -8,8 +9,8 @@ import { useResponsive } from "../hooks/useResponsive";
 // ========================================
 
 function LaborTimer({
-  isLaborRunning,
-  elapsedSeconds,
+  isLaborRunning = false,
+  elapsedSeconds = 0,
   onStartLabor,
   onStopLabor,
 }) {
@@ -21,6 +22,61 @@ function LaborTimer({
 
   // Enables the compact Raspberry Pi layout.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // LOCAL UI STATE
+  // ========================================
+
+  // Tracks whether a labor command is pending.
+  // This does not replace backend labor state.
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // ========================================
+  // TIME FORMATTING
+  // ========================================
+
+  // Converts elapsed seconds into HH:MM:SS.
+  const formatTime = (seconds) => {
+    // Prevent invalid or negative time values.
+    const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+
+    const hours = Math.floor(safeSeconds / 3600);
+
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+
+    const remainingSeconds = safeSeconds % 60;
+
+    return [hours, minutes, remainingSeconds]
+      .map((value) => String(value).padStart(2, "0"))
+      .join(":");
+  };
+
+  // ========================================
+  // LABOR COMMAND HANDLER
+  // ========================================
+
+  const handleLaborToggle = async () => {
+    // Prevent duplicate commands.
+    if (isProcessing) return;
+
+    // Determine which backend command to send.
+    const action = isLaborRunning ? onStopLabor : onStartLabor;
+
+    if (typeof action !== "function") return;
+
+    setIsProcessing(true);
+
+    try {
+      // Wait for Flask to process the command.
+      await action();
+    } catch (error) {
+      console.error("Labor command failed:", error);
+    } finally {
+      // The parent updates isLaborRunning
+      // using authoritative backend state.
+      setIsProcessing(false);
+    }
+  };
 
   // ========================================
   // STYLING
@@ -83,26 +139,12 @@ function LaborTimer({
       border: isLaborRunning ? "1px solid #EF4444" : "1px solid #22C55E",
       borderRadius: "50%",
       color: "#FFFFFF",
-      cursor: "pointer",
+      cursor: isProcessing ? "wait" : "pointer",
       flexShrink: 0,
       padding: 0,
       touchAction: "manipulation",
+      opacity: isProcessing ? 0.5 : 1,
     },
-  };
-
-  // ========================================
-  // LOGIC
-  // ========================================
-
-  // Converts seconds into HH:MM:SS.
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    return [hours, minutes, remainingSeconds]
-      .map((value) => String(value).padStart(2, "0"))
-      .join(":");
   };
 
   // ========================================
@@ -138,7 +180,8 @@ function LaborTimer({
       <button
         type="button"
         style={styles.button}
-        onClick={isLaborRunning ? onStopLabor : onStartLabor}
+        onClick={handleLaborToggle}
+        disabled={isProcessing}
         aria-label={isLaborRunning ? "Stop labor" : "Start labor"}
         title={isLaborRunning ? "Stop labor" : "Start labor"}
       >

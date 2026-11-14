@@ -1,5 +1,11 @@
+// ========================================
+// IMPORTS
+// ========================================
+
 import React from "react";
+
 import { useResponsive } from "../hooks/useResponsive";
+import { useMES } from "../context/MESContext";
 
 // ========================================
 // COMPONENT
@@ -14,6 +20,36 @@ function OperationInfo({ operation, currentPage }) {
 
   // Enables the compact layout on small landscape screens.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // LIVE BACKEND DATA
+  // ========================================
+
+  // Access the authoritative Flask MES state.
+  const { mesState } = useMES();
+
+  // Protect against missing data while loading.
+  const backendOperation = operation ?? {};
+
+  // Manufacturing operation information.
+  const operationName = backendOperation.operation ?? "Loading operation...";
+
+  const workOrder = backendOperation.work_order ?? "—";
+
+  const serialNumber = backendOperation.serial ?? "—";
+
+  const partRevision = backendOperation.part_rev ?? "—";
+
+  // Backend page count.
+  const totalPages = backendOperation.page_count ?? 0;
+
+  // Actual signed-step progress from Flask.
+  const signedSteps = mesState?.progress?.signed ?? 0;
+
+  const totalSteps = mesState?.progress?.total ?? 0;
+
+  const progress =
+    totalSteps > 0 ? Math.min(100, (signedSteps / totalSteps) * 100) : 0;
 
   // ========================================
   // STYLING
@@ -34,6 +70,7 @@ function OperationInfo({ operation, currentPage }) {
       minHeight: isKiosk ? "48px" : "auto",
       flexShrink: 0,
       overflow: "hidden",
+      boxSizing: "border-box",
     },
 
     // Individual information section
@@ -79,7 +116,7 @@ function OperationInfo({ operation, currentPage }) {
       transition: "width 0.3s ease",
     },
 
-    // Progress bar and page number container
+    // Progress bar and step count container
     progressContainer: {
       display: "flex",
       alignItems: "center",
@@ -87,22 +124,12 @@ function OperationInfo({ operation, currentPage }) {
       whiteSpace: "nowrap",
     },
 
-    // Page progress text
+    // Progress text
     progressText: {
       fontSize: isKiosk ? "11px" : "16px",
       whiteSpace: "nowrap",
     },
   };
-
-  // ========================================
-  // LOGIC
-  // ========================================
-
-  // Calculates total number of instruction pages.
-  const totalPages = operation.pages.length;
-
-  // Calculates page navigation progress.
-  const progress = (currentPage / totalPages) * 100;
 
   // ========================================
   // RETURN / JSX
@@ -116,19 +143,19 @@ function OperationInfo({ operation, currentPage }) {
       <div style={styles.section}>
         <div style={styles.label}>Operation</div>
 
-        <div style={styles.value} title={`${operation.id}: ${operation.name}`}>
-          {isKiosk ? operation.id : `${operation.id}: ${operation.name}`}
+        <div style={styles.value} title={operationName}>
+          {operationName}
         </div>
       </div>
 
       {/* =====================================
-          ASSEMBLY NAME
+          WORK ORDER
       ===================================== */}
       <div style={styles.section}>
-        <div style={styles.label}>Assembly</div>
+        <div style={styles.label}>{isKiosk ? "WO" : "Work Order"}</div>
 
-        <div style={styles.value} title={operation.assembly}>
-          {operation.assembly}
+        <div style={styles.value} title={workOrder}>
+          {workOrder}
         </div>
       </div>
 
@@ -138,16 +165,27 @@ function OperationInfo({ operation, currentPage }) {
       <div style={styles.section}>
         <div style={styles.label}>{isKiosk ? "Serial" : "Serial Number"}</div>
 
-        <div style={styles.value} title={operation.serialNumber}>
-          {operation.serialNumber}
+        <div style={styles.value} title={serialNumber}>
+          {serialNumber}
         </div>
       </div>
 
       {/* =====================================
-          PAGE PROGRESS
+          PART REVISION
+      ===================================== */}
+      <div style={styles.section}>
+        <div style={styles.label}>{isKiosk ? "Rev" : "Part Revision"}</div>
+
+        <div style={styles.value} title={partRevision}>
+          {partRevision}
+        </div>
+      </div>
+
+      {/* =====================================
+          STEP PROGRESS
       ===================================== */}
       <div>
-        <div style={styles.label}>{isKiosk ? "Page" : "Page Progress"}</div>
+        <div style={styles.label}>{isKiosk ? "Progress" : "Step Progress"}</div>
 
         <div style={styles.progressContainer}>
           {/* PROGRESS BAR */}
@@ -160,13 +198,23 @@ function OperationInfo({ operation, currentPage }) {
             />
           </div>
 
-          {/* PAGE NUMBER */}
+          {/* SIGNED STEP COUNT */}
           <span style={styles.progressText}>
-            {isKiosk
-              ? `${currentPage}/${totalPages}`
-              : `${currentPage} of ${totalPages}`}
+            {signedSteps}/{totalSteps}
           </span>
         </div>
+
+        {/* PAGE NUMBER ON LARGER SCREENS */}
+        {!isKiosk && (
+          <div
+            style={{
+              ...styles.label,
+              marginTop: "6px",
+            }}
+          >
+            Page {currentPage} of {totalPages}
+          </div>
+        )}
       </div>
     </div>
   );

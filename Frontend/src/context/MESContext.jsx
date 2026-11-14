@@ -1,79 +1,220 @@
-// ========================================
-// IMPORTS
-// ========================================
-
-import React, { createContext, useContext, useEffect, useState } from "react";
-
-import { operation } from "../data/mockInstructions";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 // ========================================
 // CONTEXT CREATION
 // ========================================
 
-// Creates the shared MES context.
 const MESContext = createContext(null);
 
 // ========================================
-// CONTEXT PROVIDER COMPONENT
+// CONTEXT PROVIDER
 // ========================================
 
 export function MESProvider({ children }) {
   // ========================================
-  // STYLING
-  // ========================================
-
-  // No styling is required here because
-  // this component manages application data.
-
-  // ========================================
   // STATE
   // ========================================
 
-  // Tracks the current instruction page.
-  const [currentPage, setCurrentPage] = useState(1);
+  // Flask is the authoritative source of MES data.
+  const [mesState, setMesState] = useState(null);
 
-  // Tracks the currently selected instruction step.
-  const [selectedStep, setSelectedStep] = useState(
-    operation.pages[0].steps[0]?.id ?? null,
-  );
+  // Tracks the WebSocket connection.
+  const [connected, setConnected] = useState(false);
 
-  // Stores completed assembly step IDs.
-  const [completedSteps, setCompletedSteps] = useState(() =>
-    operation.pages.flatMap((page) =>
-      page.steps.filter((step) => step.completed).map((step) => step.id),
-    ),
-  );
+  // Stores connection errors.
+  const [error, setError] = useState(null);
 
-  // Tracks whether labor is running.
-  const [isLaborRunning, setIsLaborRunning] = useState(false);
+  // Selected step is local UI-only state.
+  const [selectedStep, setSelectedStep] = useState(null);
 
-  // Tracks elapsed labor time in seconds.
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Latest command or backend response.
+  const [feedback, setFeedback] = useState("Connecting to MES backend...");
 
-  // Tracks whether simulated voice listening is enabled.
-  const [isListening, setIsListening] = useState(false);
-
-  // Stores the latest system feedback message.
-  const [feedback, setFeedback] = useState("Voice control is off.");
-
-  // Tracks whether supervisor authorization is required.
+  // Preserved for compatibility with older components.
+  // This does not authorize supervisor actions.
   const [isSupervisorLocked, setIsSupervisorLocked] = useState(false);
 
-  // ========================================
-  // DERIVED DATA
-  // ========================================
-
-  // Total number of instruction pages.
-  const totalPages = operation.pages.length;
-
-  // Retrieves the currently displayed instruction page.
-  const activePage = operation.pages[currentPage - 1];
+  // Display-only timer value.
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // ========================================
-  // LABOR TIMER
+  // INITIAL BACKEND STATE
   // ========================================
 
-  // Updates the labor timer while labor is running.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialState() {
+      try {
+        const response = await fetch("/api/state");
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        setMesState(data);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+
+        console.error("MES initial state error:", err);
+        setError(err.message);
+      }
+    }
+
+    loadInitialState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ========================================
+  // WEBSOCKET CONNECTION
+  // ========================================
+
+  useEffect(() => {
+    let socket = null;
+    let reconnectTimeout = null;
+    let stopped = false;
+
+    function connect() {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+      const url = `${protocol}//${window.location.host}/ws/ui`;
+
+      socket = new WebSocket(url);
+
+      socket.onopen = () => {
+        if (stopped) return;
+
+        setConnected(true);
+        setError(null);
+      };
+
+      socket.onmessage = (event) => {
+        if (stopped) return;
+
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.type === "state") {
+            setMesState(message);
+          }
+
+          if (message.type === "announce") {
+            setFeedback(message.message);
+          }
+        } catch (err) {
+          console.error("MES WebSocket message error:", err);
+        }
+      };
+
+      socket.onerror = () => {
+        if (stopped) return;
+
+        setError("MES WebSocket connection failed.");
+      };
+
+      socket.onclose = () => {
+        if (stopped) return;
+
+        setConnected(false);
+
+        reconnectTimeout = setTimeout(connect, 2000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      stopped = true;
+
+      clearTimeout(reconnectTimeout);
+
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, []);
+
+  // ========================================
+  // DERIVED BACKEND DATA
+  // ========================================
+
+  const backendOperation = mesState?.operation ?? {};
+
+  const backendPage = mesState?.page ?? null;
+
+  const currentPage = backendPage?.number ?? 1;
+
+  const totalPages = backendOperation.page_count ?? 0;
+
+  // Adapt backend step fields for existing components.
+  const activePage = backendPage
+    ? {
+        ...backendPage,
+        steps: (backendPage.steps ?? []).map((step) => ({
+          ...step,
+          id: step.number,
+          completed: step.signed,
+        })),
+      }
+    : {
+        number: 1,
+        title: "",
+        steps: [],
+      };
+
+  // Adapt backend operation fields for existing components.
+  const operation = {
+    ...backendOperation,
+    station: backendOperation.station ?? "A-01",
+    technician: backendOperation.operator ?? "Unknown",
+    pages: [activePage],
+  };
+
+  const completedSteps = activePage.steps
+    .filter((step) => step.signed)
+    .map((step) => step.id);
+
+  const isLaborRunning = mesState?.labor?.running ?? false;
+
+  const isListening = mesState?.listening ?? false;
+
+  // ========================================
+  // STEP SELECTION
+  // ========================================
+
+  // Select the first step when the backend changes pages.
+  useEffect(() => {
+    const firstStep = backendPage?.steps?.[0]?.number ?? null;
+
+    setSelectedStep(firstStep);
+  }, [currentPage, Boolean(backendPage)]);
+
+  // ========================================
+  // LABOR TIMER SYNCHRONIZATION
+  // ========================================
+
+  // Synchronize whenever Flask publishes new state.
+  const backendSeconds = mesState?.labor?.seconds ?? 0;
+
+  useEffect(() => {
+    setElapsedSeconds(backendSeconds);
+  }, [backendSeconds]);
+
+  // Advance the displayed timer while labor is running.
   useEffect(() => {
     if (!isLaborRunning) return;
 
@@ -84,185 +225,176 @@ export function MESProvider({ children }) {
     return () => clearInterval(interval);
   }, [isLaborRunning]);
 
-  // Starts the labor clock.
-  const handleStartLabor = () => {
-    if (isLaborRunning) {
-      setFeedback("Labor is already running.");
-      return;
-    }
-
-    setIsLaborRunning(true);
-    setFeedback("Labor started.");
-  };
-
-  // Stops the labor clock.
-  const handleStopLabor = () => {
-    if (!isLaborRunning) {
-      setFeedback("Labor is already stopped.");
-      return;
-    }
-
-    setIsLaborRunning(false);
-    setFeedback("Labor stopped.");
-  };
-
   // ========================================
-  // PAGE NAVIGATION
+  // BACKEND COMMAND HELPER
   // ========================================
 
-  // Navigates to a specified instruction page.
-  const navigateToPage = (pageNumber) => {
-    // Prevents navigation outside the available pages.
-    if (pageNumber < 1 || pageNumber > totalPages) {
-      setFeedback("No page available in that direction.");
-      return;
+  async function postJSON(endpoint, body) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message ?? `HTTP ${response.status}`);
+      }
+
+      if (result.state) {
+        setMesState(result.state);
+      }
+
+      if (result.message) {
+        setFeedback(result.message);
+      }
+
+      // Flask can return HTTP 200 with ok: false.
+      return result;
+    } catch (err) {
+      console.error("MES command error:", err);
+
+      setError(err.message);
+      setFeedback(`Connection error: ${err.message}`);
+
+      return {
+        ok: false,
+        message: err.message,
+      };
+    }
+  }
+
+  // ========================================
+  // TECHNICIAN COMMANDS
+  // ========================================
+
+  function sendCommand(text) {
+    return postJSON("/api/command", {
+      text,
+      source: "debug",
+    });
+  }
+
+  function handleStartLabor() {
+    return sendCommand("start labor");
+  }
+
+  function handleStopLabor() {
+    return sendCommand("stop labor");
+  }
+
+  function handlePreviousPage() {
+    return sendCommand("previous page");
+  }
+
+  function handleNextPage() {
+    return sendCommand("next page");
+  }
+
+  // Only adjacent navigation is supported.
+  function navigateToPage(pageNumber) {
+    if (pageNumber === currentPage + 1) {
+      return handleNextPage();
     }
 
-    // Updates the current page.
-    setCurrentPage(pageNumber);
+    if (pageNumber === currentPage - 1) {
+      return handlePreviousPage();
+    }
 
-    // Selects the first step on the new page.
-    setSelectedStep(operation.pages[pageNumber - 1].steps[0]?.id ?? null);
+    setFeedback("Direct page navigation is not supported by the backend.");
 
-    setFeedback(`Opened page ${pageNumber}.`);
-  };
-
-  // Navigates backward.
-  const handlePreviousPage = () => {
-    navigateToPage(currentPage - 1);
-  };
-
-  // Navigates forward.
-  const handleNextPage = () => {
-    navigateToPage(currentPage + 1);
-  };
+    return Promise.resolve({
+      ok: false,
+      message: "Direct page navigation is not supported.",
+    });
+  }
 
   // ========================================
   // STEP MANAGEMENT
   // ========================================
 
-  // Selects an instruction step.
-  const handleSelectStep = (stepId) => {
+  function handleSelectStep(stepId) {
     setSelectedStep(stepId);
-  };
+  }
 
-  // Signs off a single step.
-  const handleSignOffStep = (stepId) => {
-    // Verify that the step exists on the current page.
-    const stepExists = activePage.steps.some((step) => step.id === stepId);
+  function handleSignOffStep(stepId = selectedStep) {
+    const step = activePage.steps.find((item) => item.id === stepId);
 
-    if (!stepExists) {
-      setFeedback("Step not found on the current page.");
-      return;
+    if (!step) {
+      setFeedback("Select a valid step first.");
+
+      return Promise.resolve({
+        ok: false,
+        message: "Step not found.",
+      });
     }
 
-    // Prevent duplicate sign-offs.
-    if (completedSteps.includes(stepId)) {
-      setFeedback(`Step ${stepId} is already completed.`);
-      return;
-    }
+    return sendCommand(`step ${step.number} done`);
+  }
 
-    // Demo-only sign-off.
-    setCompletedSteps((previous) => [...previous, stepId]);
-
-    setFeedback(`Step ${stepId} signed off (demo).`);
-  };
-
-  // Signs off every step on the current page.
-  const handleSignOffPage = () => {
-    // Collect all step IDs from the current page.
-    const pageStepIds = activePage.steps.map((step) => step.id);
-
-    // Mark every step as completed.
-    setCompletedSteps((previous) => [
-      ...new Set([...previous, ...pageStepIds]),
-    ]);
-
-    // Advance automatically if another page exists.
-    if (currentPage < totalPages) {
-      navigateToPage(currentPage + 1);
-
-      setFeedback(`Page ${currentPage} signed off (demo).`);
-    } else {
-      setFeedback("Final page signed off (demo).");
-    }
-  };
+  function handleSignOffPage() {
+    // Backend decides which steps are eligible.
+    // Page sign-off does NOT auto-advance.
+    return sendCommand("page done");
+  }
 
   // ========================================
-  // VOICE CONTROL
+  // LISTENING CONTROL
   // ========================================
 
-  // Toggles simulated voice listening.
-  const handleToggleListening = () => {
-    setIsListening((previous) => !previous);
+  function handleToggleListening() {
+    // Development-only simulation of ESP32 button.
+    return postJSON("/api/panel/button", {
+      id: "listen_toggle",
+    });
+  }
 
-    setFeedback(
-      isListening ? "Voice control stopped." : "Voice control started.",
-    );
-  };
+  // ========================================
+  // SIMULATED VOICE COMMANDS
+  // ========================================
 
-  // Processes simulated voice commands.
-  const handleVoiceCommand = (command) => {
-    if (!isListening) {
-      setFeedback("Voice control is not listening.");
-      return;
+  function handleVoiceCommand(command) {
+    const normalized = command.toLowerCase().trim();
+
+    if (normalized === "sign off step") {
+      return handleSignOffStep();
     }
 
-    switch (command.toLowerCase().trim()) {
-      case "next page":
-        handleNextPage();
-        break;
-
-      case "previous page":
-        handlePreviousPage();
-        break;
-
-      case "start labor":
-        handleStartLabor();
-        break;
-
-      case "stop labor":
-        handleStopLabor();
-        break;
-
-      case "sign off step":
-        handleSignOffStep(selectedStep);
-        break;
-
-      case "sign off page":
-        handleSignOffPage();
-        break;
-
-      default:
-        setFeedback("Command not recognized.");
-        break;
+    if (normalized === "sign off page") {
+      return handleSignOffPage();
     }
-  };
+
+    return sendCommand(normalized);
+  }
 
   // ========================================
-  // SUPERVISOR AUTHORIZATION
+  // LEGACY SUPERVISOR OVERLAY STATE
   // ========================================
 
-  // Activates the supervisor lock.
-  const requestSupervisor = () => {
+  // These functions do not grant backend permissions.
+  function requestSupervisor() {
     setIsSupervisorLocked(true);
-    setFeedback("Supervisor authorization required.");
-  };
+  }
 
-  // Clears the supervisor lock after authorization.
-  // This must only be called after successful PIN validation.
-  const authorizeSupervisor = () => {
+  function authorizeSupervisor() {
     setIsSupervisorLocked(false);
-    setFeedback("Supervisor authorization successful.");
-  };
+  }
 
   // ========================================
   // CONTEXT VALUES
   // ========================================
 
-  // Makes all shared state and actions available
-  // to the dashboard and supervisor page.
   const contextValue = {
+    // Live backend information
+    mesState,
+    connected,
+    error,
+
+    // Adapted dashboard information
     operation,
     currentPage,
     selectedStep,
@@ -275,6 +407,8 @@ export function MESProvider({ children }) {
     feedback,
     isSupervisorLocked,
 
+    // Technician actions
+    sendCommand,
     handleStartLabor,
     handleStopLabor,
     navigateToPage,
@@ -285,6 +419,8 @@ export function MESProvider({ children }) {
     handleSignOffPage,
     handleToggleListening,
     handleVoiceCommand,
+
+    // Legacy compatibility
     requestSupervisor,
     authorizeSupervisor,
   };
@@ -302,7 +438,6 @@ export function MESProvider({ children }) {
 // CUSTOM HOOK
 // ========================================
 
-// Allows components to access shared MES state.
 export function useMES() {
   const context = useContext(MESContext);
 

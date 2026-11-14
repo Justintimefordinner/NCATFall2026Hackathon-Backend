@@ -1,10 +1,7 @@
 import React from "react";
-import { ClipboardList, Info } from "lucide-react";
+import { CheckCircle2, ClipboardList, Info, ShieldAlert } from "lucide-react";
 
 import { useResponsive } from "../hooks/useResponsive";
-
-// Assembly instruction image
-import LegoImage from "../assets/Lego.jpg";
 
 // ========================================
 // COMPONENT
@@ -19,6 +16,34 @@ function InstructionViewer({ page, selectedStep }) {
 
   // Enables the compact kiosk layout.
   const isKiosk = isCompact && isSmallHeight;
+
+  // ========================================
+  // BACKEND INSTRUCTION DATA
+  // ========================================
+
+  // The backend provides steps instead of
+  // the old mock page.instructions array.
+  const steps = page?.steps ?? [];
+
+  // Find the currently selected instruction.
+  const activeStep =
+    steps.find((step) => step.id === selectedStep) ?? steps[0] ?? null;
+
+  // Display the selected step number and page title.
+  const displayTitle = activeStep
+    ? `${page?.title ?? "Assembly"} — Step ${activeStep.number}`
+    : (page?.title ?? "Assembly Instructions");
+
+  // Flask provides image URLs such as:
+  // /static/img/p1s1.jpg
+  const imageSource = activeStep?.image ?? null;
+
+  // Step completion information.
+  const isSigned = activeStep?.signed ?? false;
+
+  const inspectorRequired = activeStep?.inspector_required ?? false;
+
+  const pendingInspector = activeStep?.pending_inspector ?? false;
 
   // ========================================
   // STYLING
@@ -38,6 +63,7 @@ function InstructionViewer({ page, selectedStep }) {
       flexDirection: "column",
       gap: isKiosk ? "8px" : "24px",
       overflow: "hidden",
+      boxSizing: "border-box",
     },
 
     // Instruction page title
@@ -83,6 +109,14 @@ function InstructionViewer({ page, selectedStep }) {
       display: "block",
     },
 
+    // Missing image placeholder
+    imagePlaceholder: {
+      color: "#94A3B8",
+      fontSize: isKiosk ? "11px" : "15px",
+      textAlign: "center",
+      padding: "12px",
+    },
+
     // Right instruction panel
     instructionsPanel: {
       flex: 1,
@@ -106,15 +140,22 @@ function InstructionViewer({ page, selectedStep }) {
       flexShrink: 0,
     },
 
-    // Instruction list
-    instructionsList: {
-      display: "flex",
-      flexDirection: "column",
-      gap: isKiosk ? "5px" : "16px",
-      paddingLeft: isKiosk ? "18px" : "24px",
+    // Instruction text
+    instructionText: {
+      color: "#FFFFFF",
+      fontSize: isKiosk ? "12px" : "18px",
+      lineHeight: isKiosk ? 1.4 : 1.6,
       margin: 0,
-      fontSize: isKiosk ? "11px" : "16px",
-      lineHeight: isKiosk ? 1.3 : 1.6,
+    },
+
+    // Step status
+    status: {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      fontSize: isKiosk ? "10px" : "14px",
+      fontWeight: "bold",
+      color: isSigned ? "#22C55E" : pendingInspector ? "#FACC15" : "#94A3B8",
     },
 
     // Important information box
@@ -148,16 +189,6 @@ function InstructionViewer({ page, selectedStep }) {
   };
 
   // ========================================
-  // LOGIC
-  // ========================================
-
-  // Find the currently selected step.
-  const activeStep = page.steps.find((step) => step.id === selectedStep);
-
-  // Display the selected step title when available.
-  const displayTitle = activeStep ? activeStep.title : page.title;
-
-  // ========================================
   // RETURN / JSX
   // ========================================
 
@@ -176,11 +207,17 @@ function InstructionViewer({ page, selectedStep }) {
             ASSEMBLY IMAGE
         ===================================== */}
         <div style={styles.imageContainer}>
-          <img
-            src={LegoImage}
-            alt="Assembly instruction reference"
-            style={styles.image}
-          />
+          {imageSource ? (
+            <img
+              src={imageSource}
+              alt={`Assembly reference for step ${activeStep.number}`}
+              style={styles.image}
+            />
+          ) : (
+            <div style={styles.imagePlaceholder}>
+              No instruction image available.
+            </div>
+          )}
         </div>
 
         {/* =====================================
@@ -193,12 +230,32 @@ function InstructionViewer({ page, selectedStep }) {
             <span>Instructions</span>
           </div>
 
-          {/* NUMBERED INSTRUCTIONS */}
-          <ol style={styles.instructionsList}>
-            {page.instructions.map((instruction, index) => (
-              <li key={index}>{instruction}</li>
-            ))}
-          </ol>
+          {/* SELECTED STEP INSTRUCTION */}
+          <p style={styles.instructionText}>
+            {activeStep?.text ?? "No instruction selected."}
+          </p>
+
+          {/* STEP COMPLETION STATUS */}
+          {activeStep && (
+            <div style={styles.status}>
+              {isSigned ? (
+                <>
+                  <CheckCircle2 size={isKiosk ? 13 : 18} />
+                  <span>
+                    Signed Off
+                    {activeStep.signed_by ? ` by ${activeStep.signed_by}` : ""}
+                  </span>
+                </>
+              ) : pendingInspector ? (
+                <>
+                  <ShieldAlert size={isKiosk ? 13 : 18} />
+                  <span>Pending Inspector Approval</span>
+                </>
+              ) : (
+                <span>Not Yet Signed Off</span>
+              )}
+            </div>
+          )}
 
           {/* =====================================
               IMPORTANT INFORMATION NOTE
@@ -206,12 +263,17 @@ function InstructionViewer({ page, selectedStep }) {
           <div style={styles.note}>
             <div style={styles.noteHeading}>
               <Info size={isKiosk ? 13 : 22} style={{ flexShrink: 0 }} />
-              <span>Important Note</span>
+              <span>
+                {inspectorRequired
+                  ? "Inspector Sign-Off Required"
+                  : "Important Note"}
+              </span>
             </div>
 
             <p style={styles.noteText}>
-              Follow the provided assembly instructions and verify all
-              components before proceeding.
+              {inspectorRequired
+                ? "This step requires supervisor approval before it can be considered complete."
+                : "Follow the provided assembly instructions and verify all components before proceeding."}
             </p>
           </div>
         </div>
