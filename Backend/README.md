@@ -28,7 +28,8 @@ wscat -c ws://localhost:5000/ws/ui              # watch state / announce pushes
 
 - Every POST returns `{"ok", "message", "state"}` with HTTP 200, even when `ok` is false. 400 only for malformed JSON.
 - `/ws/ui` pushes `{"type": "state", ...snapshot}` on connect and after every change, plus `{"type": "announce", "message"}` when the result should be spoken.
-- `/ws/panel` pushes `{"type": "lights", "power", "listening", "labor", "alert", "complete"}` on connect, on change, and every 1 s.
+- `/ws/panel` pushes `{"type": "lights", "power", "listening", "labor", "alert", "inspector", "complete"}` on connect, on change, and every 1 s. `inspector` is true while any step waits on supervisor sign-off.
+- Panel button ids: `power` (short press: standby -> on), `power_off` (long press: back to standby, mode `idle`; progress, alerts and the labor total are kept, the clock and listening stop), `listen_toggle` (ignored in standby).
 - `state.page.all_signed` is true when every step on the current page is signed (use it for the "page complete" banner; "page done" does not auto-advance).
 - `state.log` is the newest 50 entries, oldest first.
 - Voice POSTs to `/api/command` may include `role` and `speaker_score` (the voice client sends both). A supervisor saying "supervisor confirm" / "clear alert" opens `state.supervisor_challenge = {phrase, action, expires_at}` and announces "Supervisor, confirm with: <phrase>". The next utterance must contain the phrase, come from `role: "supervisor"` with `speaker_score >= MES_SUPERVISOR_VOICE` (0.65), and arrive within 15 s; otherwise it announces "Supervisor voice not recognized". The PIN routes are unchanged.

@@ -11,12 +11,12 @@ SIGN_STEP, SIGN_PAGE, UNKNOWN = "sign_step", "sign_page", "unknown"
 # supervisor voice intents (open a spoken challenge; PIN routes stay separate)
 SUPERVISOR_CONFIRM, CLEAR_ALERT = "supervisor_confirm", "clear_alert"
 # panel intents
-POWER, LISTEN_TOGGLE = "power", "listen_toggle"
+POWER, POWER_OFF, LISTEN_TOGGLE = "power", "power_off", "listen_toggle"   # power_off = long press
 # supervisor intents
 INSPECTOR_SIGNOFF, QUALITY_TRIGGER, QUALITY_ACK, RESET = (
     "inspector_signoff", "quality_trigger", "quality_ack", "reset")
 
-PANEL_INTENTS = {POWER, LISTEN_TOGGLE}
+PANEL_INTENTS = {POWER, POWER_OFF, LISTEN_TOGGLE}
 SUPERVISOR_INTENTS = {INSPECTOR_SIGNOFF, QUALITY_TRIGGER, QUALITY_ACK, RESET}
 BLOCKED_BY_ALERT = {SIGN_STEP, SIGN_PAGE, NEXT_PAGE, PREV_PAGE}
 
