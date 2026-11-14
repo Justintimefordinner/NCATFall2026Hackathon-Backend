@@ -6,8 +6,13 @@ It reuses the models and Python environment from `Voice/Voice/` (Adan's v1), so 
 
 ```
 USB mic ─► 120 Hz high-pass ─► Silero VAD ─► loudness gate ─► [speaker score ‖ Moonshine STT] ─► POST /api/command
-USB speaker ◄── TTS (Piper, else espeak-ng) ◄── {"type":"announce"} on ws /ws/ui
+USB speaker ◄── Voice/Voice/tts.py ◄── {"type":"announce", "priority"} on ws /ws/ui
 ```
+
+**Speech output is shared with v1:** `client.py` uses `Voice/Voice/tts.py` (Piper with an espeak-ng
+fallback, a WAV cache with pre-rendered phrases, a priority queue where quality alerts chime and interrupt,
+and an "MES activated" greeting). Settings: `TTS_VOICE`, `TTS_SPEED`, `TTS_TAIL`, `TTS_LEAD_IN`,
+`TTS_PLAYER`, `TTS_PRERENDER`, `GREETING` in `vconfig.py`. `engines.TTS` is no longer used by the client.
 
 ## What changed from v1, and why
 
@@ -66,7 +71,9 @@ sudo systemctl restart mes-voice
 Pick the backend's threshold between the supervisor's **lowest** score and everyone else's **highest**.
 The doc says to set it strict. The threshold lives in the **backend** (`Backend/config.py`), not here.
 
-**Backend side (Justin):** the challenge flow ("supervisor confirm" → random phrase → repeat it within 15 s,
+**Backend side (Justin):** a voice command with no `role` and `speaker_score >= MES_SUPERVISOR_VOICE`
+(default 0.65) is treated as the supervisor. Tune that threshold to the room-adjusted scores from `enroll.py --test`.
+The challenge flow ("supervisor confirm" → random phrase → repeat it within 15 s,
 words match and `speaker_score >= threshold`) has to exist in `Backend/state.py` for voice confirmation to work.
 Voice already sends `speaker_score` on every command. With no supervisor enrolled it sends `0.0`,
 so supervisor voice actions fail safely and the PIN still works.

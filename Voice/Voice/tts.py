@@ -317,7 +317,8 @@ class AplayOut:
 # ---------------- the speaker ----------------
 class Speaker:
     def __init__(self, engine="piper", voice=None, speed=1.1, out_device=None, player="sounddevice",
-                 mute=False, cache_dir=CACHE_DIR, chime=True, out=None, lead_in=LEAD_IN):
+                 mute=False, cache_dir=CACHE_DIR, chime=True, out=None, lead_in=LEAD_IN,
+                 echo_tail=ECHO_TAIL, on_play=None):
         self.engine = None if mute else (make_engine(engine, voice, speed)
                                          if isinstance(engine, str) else engine)
         self.out = out
@@ -349,6 +350,8 @@ class Speaker:
         self.last_said = ("", 0.0)            # (lowercased text, time) for client.py's echo filter
         self.started = False
         self.lead_in = max(0.0, lead_in)
+        self.echo_tail = max(0.0, echo_tail)
+        self.on_play = on_play                # callback(text) when a line starts playing (latency logs)
         self.fresh = True                     # output was idle: pad the next clip with LEAD_IN
         if self.engine is not None:
             os.makedirs(cache_dir, exist_ok=True)
@@ -472,7 +475,7 @@ class Speaker:
         """Next item, or None after ECHO_TAIL of silence (then the mic may listen again)."""
         with self.cv:
             if not self.pending:
-                self.cv.wait(ECHO_TAIL if is_speaking() else None)
+                self.cv.wait(self.echo_tail if is_speaking() else None)
             if not self.pending:
                 return None
             item = heapq.heappop(self.pending)
@@ -505,6 +508,11 @@ class Speaker:
                 if not self.cut.is_set():
                     SPEAKING.set()
                     self.fresh = False
+                    if self.on_play and kind == "say":
+                        try:
+                            self.on_play(text)
+                        except Exception as e:
+                            print(f"  (tts on_play error: {e})")
                     self.out.play(x, self.cut)
             except Exception as e:
                 print(f"  (tts/playback error: {e})")

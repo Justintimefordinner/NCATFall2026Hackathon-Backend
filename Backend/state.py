@@ -52,6 +52,10 @@ class MES:
 
     # ---------- entry point ----------
     def dispatch(self, cmd: Command) -> Result:
+        # Voice v2 sends only speaker_score (no role): a strong supervisor match is the supervisor
+        if (cmd.source == "voice" and cmd.role is None and cmd.speaker_score is not None
+                and cmd.speaker_score >= config.SUPERVISOR_VOICE_THRESHOLD):
+            cmd.role = SUPERVISOR
         with self.lock:
             self._expire_challenge()
             answering = self.challenge is not None and cmd.source == "voice" and self.listening

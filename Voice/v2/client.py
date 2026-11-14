@@ -11,7 +11,8 @@ backend code and never decides what a command means.
 
   USB mic -> 120 Hz high-pass -> Silero VAD -> loudness gate
           -> [speaker score vs supervisor || Moonshine STT] -> POST /api/command
-  /ws/ui announce -> TTS -> speaker   (mic muted while speaking, plus a short tail)
+  /ws/ui announce -> Voice/Voice/tts.py (cache, priority queue, alert chime) -> speaker
+                     (mic muted while tts.SPEAKING is set, i.e. while talking + TTS_TAIL)
 
 Every segment and gate decision is logged with its level (risk plan: catch
 silent drops), plus end-of-speech -> spoken-reply latency for each command.
@@ -28,6 +29,7 @@ import difflib
 import json
 import os
 import queue
+import sys
 import threading
 import time
 
@@ -36,8 +38,12 @@ import requests
 
 import engines as E
 import vconfig
-from audio_io import SR, HighPass, Mic, Player, list_devices, rms
+from audio_io import SR, HighPass, Mic, list_devices, rms
 from pipeline import Pipeline
+
+# speech output is shared with v1: Voice/Voice/tts.py (and its models.py for Piper)
+sys.path.insert(1, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Voice"))
+import tts as T  # noqa: E402
 
 try:
     import websocket  # websocket-client
@@ -81,26 +87,19 @@ class VoiceClient:
         self.has_supervisor = sup is not None
         self.pipe = Pipeline(cfg, self.asr, speaker, sup, center)
 
-        self.tts = E.TTS(cfg)
-        print(f"  tts: {self.tts.engine}")
-        self.player = None
-        if self.tts.engine != "none":
-            try:
-                self.player = Player(cfg.SPEAKER_DEVICE)
-                print(f"  speaker out: {self.player.name} @ {self.player.rate} Hz")
-            except Exception as e:
-                print(f"  [tts] no usable speaker ({e}); announcements printed only")
+        engine = (cfg.TTS_ENGINE or "auto").lower()
+        self.tts = T.Speaker("espeak" if engine == "espeak" else "piper", cfg.TTS_VOICE,
+                             float(cfg.TTS_SPEED), cfg.SPEAKER_DEVICE, cfg.TTS_PLAYER,
+                             mute=not cfg.USE_TTS or engine == "none",
+                             lead_in=float(cfg.TTS_LEAD_IN), echo_tail=float(cfg.TTS_TAIL),
+                             on_play=self.on_play)
 
         self.hp = HighPass(fc=cfg.HIGHPASS_HZ)
         self.listening = listen_default
         self.ws_up = False
-        self.say_q = queue.Queue()
-        self.muted_until = 0.0          # mic ignored until this time (TTS + tail)
-        self.speaking = threading.Event()
         self.flush = True
         self.floor = cfg.NOISE_FLOOR_START
         self.buf = np.zeros(0, np.float32)
-        self.last_said = ("", 0.0)
         self.pending = None             # (end_of_speech_time, text) of the last command sent
         self.n = 0
 
@@ -132,7 +131,11 @@ class VoiceClient:
                     self.flush = True
                 self.listening = new
         elif kind == "announce" and msg.get("message"):
-            self.say_q.put((msg["message"], time.time()))
+            try:
+                priority = int(msg.get("priority", T.CONFIRM))
+            except (TypeError, ValueError):
+                priority = T.CONFIRM
+            self.tts.speak(msg["message"], priority)
 
     def start_ws(self):
         if websocket is None:
@@ -174,38 +177,15 @@ class VoiceClient:
         except requests.RequestException as e:
             return None, None, f"backend unreachable ({e.__class__.__name__})"
 
-    # ---------------- speaking ----------------
-    def tts_worker(self):
-        while True:
-            text, t_arrived = self.say_q.get()
-            e2e = None
-            if self.pending and t_arrived - self.pending[0] < 6:
-                e2e = self.pending[0]
-                self.pending = None
-            print(f"{ts()}   BENCH: {text}")
-            self.last_said = (text.lower(), time.time())
-            if not self.player:
-                if e2e:
-                    print(f"           latency: end of speech -> announce {int((t_arrived - e2e) * 1000)} ms")
-                continue
-            x, sr = self.tts.synth(text)
-            if not len(x):
-                continue
-            self.speaking.set()
-            self.flush = True
-            try:
-                if e2e:
-                    ms = int((time.time() - e2e) * 1000)
-                    flag = "" if ms <= 1000 else "  (over 1 s target)"
-                    print(f"           latency: end of speech -> spoken reply {ms} ms{flag}")
-                    self.jlog(kind="latency", ms=ms, text=text)
-                self.player.play(x, sr)
-            except Exception as e:
-                print(f"  [tts] playback error: {e}")
-            finally:
-                self.muted_until = time.time() + float(self.cfg.TTS_TAIL)
-                self.last_said = (text.lower(), time.time())
-                self.speaking.clear()
+    # ---------------- speaking (Voice/Voice/tts.py) ----------------
+    def on_play(self, text):
+        """tts.py calls this as a line starts playing: report end of speech -> spoken reply."""
+        pending, self.pending = self.pending, None
+        if pending and time.time() - pending[0] < 6:
+            ms = int((time.time() - pending[0]) * 1000)
+            flag = "" if ms <= 1000 else "  (over 1 s target)"
+            print(f"           latency: end of speech -> spoken reply {ms} ms{flag}")
+            self.jlog(kind="latency", ms=ms, text=text)
 
     @staticmethod
     def _norm(s):
@@ -213,7 +193,7 @@ class VoiceClient:
 
     def is_echo(self, text):
         """Mic picked up the bench's own announcement (right after it finished talking)."""
-        said, t = self.last_said
+        said, t = self.tts.last_said
         if not self.cfg.USE_ECHO_FILTER or not said or time.time() - t > self.cfg.ECHO_WINDOW:
             return False
         return difflib.SequenceMatcher(None, self._norm(text), self._norm(said)).ratio() >= self.cfg.ECHO_SIMILARITY
@@ -234,7 +214,7 @@ class VoiceClient:
                 chunk = self.mic.read(timeout=1.0)
             except queue.Empty:
                 continue
-            if not self.listening or self.speaking.is_set() or time.time() < self.muted_until:
+            if not self.listening or T.is_speaking():
                 self.flush = True
                 continue
             if self.flush:
@@ -307,10 +287,12 @@ class VoiceClient:
         self.jlog(**entry)
 
     def run(self, device):
-        threading.Thread(target=self.tts_worker, daemon=True).start()
+        self.tts.start(prerender=bool(self.cfg.TTS_PRERENDER))
         self.start_ws()
         self.mic = Mic(device)
         print(f"  mic: {self.mic.name} ({self.mic.rate} Hz)")
+        if self.tts.out is not None and getattr(self.tts.out, "device", None) == self.mic.index:
+            self.tts.match_rate(self.mic.rate)     # one USB card for mic and speaker
         self.calibrate()
         for _ in range(20):
             if self.ws_up:
@@ -319,6 +301,8 @@ class VoiceClient:
         if not self.ws_up:
             print(f"  !! backend not reachable at {self.ws_url} yet (is the mes service running?). Will keep trying.")
         print(f"Ready. listening={self.listening}. Log: {self.log_path}. Ctrl+C to quit.\n")
+        if self.cfg.GREETING:
+            self.tts.speak(self.cfg.GREETING, T.INFO)    # proof the speaker works, no backend needed
         for seg, t_end in self.segments():
             try:
                 self.handle(seg, t_end)
