@@ -1,0 +1,5 @@
+# voiceprints and voice recordings are biometrics - never commit
+voices/
+testset/
+logs/
+__pycache__/

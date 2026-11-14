@@ -1,0 +1,7 @@
+# 2.x changed the Piper TTS setup and breaks it ("phoneme_codepoints is empty")
+sherpa-onnx>=1.10.30,<2
+sounddevice
+numpy
+scipy
+requests
+websocket-client>=1.6
