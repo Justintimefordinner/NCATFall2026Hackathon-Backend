@@ -12,7 +12,7 @@ from flask_sock import Sock
 import config
 from hub import Hub
 from models import (
-    INSPECTOR_SIGNOFF, PANEL_INTENTS, QUALITY_ACK, QUALITY_TRIGGER, RESET, Command,
+    ALERT, INFO, INSPECTOR_SIGNOFF, PANEL_INTENTS, QUALITY_ACK, QUALITY_TRIGGER, RESET, Command,
 )
 from parser import parse
 from state import MES
@@ -91,6 +91,26 @@ def quality_trigger():
 def quality_acknowledge():
     pin = body().get("pin")
     return run(Command(QUALITY_ACK, "supervisor", {"pin": pin}, raw="quality acknowledge"))
+
+
+@app.post("/api/speak")
+def speak():
+    """Make the bench say something (supervisor screen, testers, faked demo alerts).
+    Only broadcasts an announce; the voice process does the audio."""
+    b = body()
+    text = b.get("text")
+    if not isinstance(text, str) or not text.strip():
+        abort(400, "'text' is required")
+    try:
+        priority = int(b.get("priority", INFO))
+    except (TypeError, ValueError):
+        abort(400, "'priority' must be 1, 2 or 3")
+    if not ALERT <= priority <= INFO:
+        abort(400, "'priority' must be 1, 2 or 3")
+    text = text.strip()
+    mes.record_announcement(text)
+    hub.announce(text, priority)
+    return jsonify(ok=True, message=text, priority=priority)
 
 
 @app.post("/api/reset")

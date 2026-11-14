@@ -6,7 +6,8 @@ tools/fake_backend.py - stand-in for Justin's backend so Voice can be tested alo
 
 Prints every transcript the voice client POSTs, and echoes it back as an
 "announce" over /ws/ui so you hear the full round trip through the speaker.
-Type  l  + Enter here to toggle listening (simulates the Listen button).
+Type  l  + Enter here to toggle listening (simulates the Listen button),
+      a  + Enter to fire a quality alert (priority 1, should interrupt speech).
 """
 import json
 import threading
@@ -38,8 +39,15 @@ def broadcast(msg):
 def command():
     d = request.get_json(force=True, silent=True) or {}
     print(f"[voice] {d.get('speaker')}/{d.get('role')} said {d.get('text')!r} conf={d.get('confidence')}")
-    broadcast({"type": "announce", "message": f"Heard: {d.get('text', '')}"})
+    broadcast({"type": "announce", "message": f"Heard: {d.get('text', '')}", "priority": 2})
     return jsonify({"ok": True, "message": "heard"})
+
+
+@app.post("/api/speak")
+def speak():
+    d = request.get_json(force=True, silent=True) or {}
+    broadcast({"type": "announce", "message": d.get("text", ""), "priority": int(d.get("priority", 3))})
+    return jsonify({"ok": True})
 
 
 @sock.route("/ws/ui")
@@ -57,7 +65,11 @@ def ws_ui(ws):
 
 def keyboard():
     while True:
-        if input().strip().lower() == "l":
+        key = input().strip().lower()
+        if key == "a":
+            broadcast({"type": "announce", "priority": 1,
+                       "message": "Quality alert: bolt 6 is not torqued to spec"})
+        if key == "l":
             state["listening"] = not state["listening"]
             print(f"listening = {state['listening']}")
             broadcast(state)
@@ -67,5 +79,5 @@ def keyboard():
 
 if __name__ == "__main__":
     threading.Thread(target=keyboard, daemon=True).start()
-    print("Fake backend on :5000  (type l + Enter to toggle listening)")
+    print("Fake backend on :5000  (l + Enter: toggle listening, a + Enter: quality alert)")
     app.run(host="0.0.0.0", port=5000, threaded=True)

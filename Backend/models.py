@@ -32,11 +32,17 @@ class Command:
     speaker_score: float | None = None          # speaker-match score from the voice process
 
 
+# announcement priority (lower = more urgent). The voice process lets an ALERT
+# interrupt whatever is playing and a newer CONFIRM replace an older one.
+ALERT, CONFIRM, INFO = 1, 2, 3
+
+
 @dataclass
 class Result:
     ok: bool
     message: str                # spoken, shown on screen, logged
     speak: bool = True          # False for silent results (wrong PIN, ignored voice)
+    priority: int = CONFIRM     # ALERT | CONFIRM | INFO, sent with the announce
 
 
 @dataclass
