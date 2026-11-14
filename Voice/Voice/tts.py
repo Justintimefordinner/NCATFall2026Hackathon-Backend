@@ -318,7 +318,7 @@ class AplayOut:
 class Speaker:
     def __init__(self, engine="piper", voice=None, speed=1.1, out_device=None, player="sounddevice",
                  mute=False, cache_dir=CACHE_DIR, chime=True, out=None, lead_in=LEAD_IN,
-                 echo_tail=ECHO_TAIL, on_play=None):
+                 echo_tail=ECHO_TAIL, on_play=None, keep_alive=0.0):
         self.engine = None if mute else (make_engine(engine, voice, speed)
                                          if isinstance(engine, str) else engine)
         self.out = out
@@ -352,6 +352,13 @@ class Speaker:
         self.lead_in = max(0.0, lead_in)
         self.echo_tail = max(0.0, echo_tail)
         self.on_play = on_play                # callback(text) when a line starts playing (latency logs)
+        # Bluetooth speakers mute their amp on digital silence and drop the link when idle, then
+        # clip the first syllable. keep_alive > 0 keeps the output open and plays inaudible noise
+        # at this amplitude (e.g. 0.001 = -60 dBFS) whenever the bench isn't talking.
+        self.keep_alive = max(0.0, float(keep_alive or 0.0))
+        self.done_at = 0.0                    # when the last line finished (echo tail in keep-alive mode)
+        self._never = threading.Event()       # "cut" for keep-alive writes: never set
+        self._idle_err = 0.0
         self.fresh = True                     # output was idle: pad the next clip with LEAD_IN
         if self.engine is not None:
             os.makedirs(cache_dir, exist_ok=True)
@@ -474,7 +481,7 @@ class Speaker:
     def _next(self):
         """Next item, or None after ECHO_TAIL of silence (then the mic may listen again)."""
         with self.cv:
-            if not self.pending:
+            if not self.pending and not self.keep_alive:
                 self.cv.wait(self.echo_tail if is_speaking() else None)
             if not self.pending:
                 return None
@@ -487,9 +494,30 @@ class Speaker:
         self.fresh = True
         self.out.close()
 
+    def _idle_tick(self):
+        """Keep-alive mode: 50 ms of inaudible noise. The blocking write paces this loop."""
+        if is_speaking() and time.time() - self.done_at >= self.echo_tail:
+            SPEAKING.clear()
+        n = int(0.05 * self.out.sr)
+        hum = (np.random.standard_normal(n) * self.keep_alive).astype(np.float32)
+        try:
+            self.out.play(hum, self._never)
+        except Exception as e:
+            if time.time() - self._idle_err > 30:
+                print(f"  (tts keep-alive error: {e})")
+                self._idle_err = time.time()
+            try:
+                self.close_out()
+            except Exception:
+                pass
+            time.sleep(0.5)
+
     def _player(self):
         while True:
             item = self._next()
+            if item is None and self.keep_alive:
+                self._idle_tick()
+                continue
             if item is None:
                 try:
                     self.close_out()
@@ -526,7 +554,8 @@ class Speaker:
                     idle = not self.pending
                 if kind == "say":
                     self.last_said = (text.lower(), time.time())
-            if idle:                              # let the speaker finish before the echo tail starts
+                self.done_at = time.time()
+            if idle and not self.keep_alive:      # let the speaker finish before the echo tail starts
                 try:
                     self.close_out()
                 except Exception as e:

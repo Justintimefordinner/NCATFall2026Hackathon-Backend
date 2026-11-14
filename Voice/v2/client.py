@@ -92,7 +92,7 @@ class VoiceClient:
                              float(cfg.TTS_SPEED), cfg.SPEAKER_DEVICE, cfg.TTS_PLAYER,
                              mute=not cfg.USE_TTS or engine == "none",
                              lead_in=float(cfg.TTS_LEAD_IN), echo_tail=float(cfg.TTS_TAIL),
-                             on_play=self.on_play)
+                             on_play=self.on_play, keep_alive=float(cfg.TTS_KEEPALIVE or 0))
 
         self.hp = HighPass(fc=cfg.HIGHPASS_HZ)
         self.listening = listen_default
