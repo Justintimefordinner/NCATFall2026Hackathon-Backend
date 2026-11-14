@@ -169,12 +169,13 @@ def tone(freqs, sr, dur, amp, gap=0.0):
     t = np.arange(int(dur * sr)) / sr
     fade = np.minimum(1.0, np.minimum(t, t[::-1]) / 0.01)
     for fq in freqs:
-        out += [amp * fade * np.sin(2 * np.pi * fq * t), np.zeros(int(gap * sr))]
+        out += [amp * fade * np.sin(2 * np.pi * fq * t), np.zeros(int(gap * sr), np.float32)]
     return np.concatenate(out).astype(np.float32)
 
 
 def alert_chime(sr):
-    return np.concatenate([tone([988, 740], sr, 0.16, 0.6, gap=0.04), np.zeros(int(0.12 * sr))])
+    return np.concatenate([tone([988, 740], sr, 0.16, 0.6, gap=0.04),
+                           np.zeros(int(0.12 * sr), np.float32)])
 
 
 def earcon(sr):
@@ -500,6 +501,7 @@ class Speaker:
                     x = np.concatenate([alert_chime(self.out.sr), x])
                 if self.fresh and self.lead_in:
                     x = np.concatenate([np.zeros(int(self.lead_in * self.out.sr), np.float32), x])
+                x = np.ascontiguousarray(x, dtype=np.float32)   # the output stream only takes float32
                 if not self.cut.is_set():
                     SPEAKING.set()
                     self.fresh = False
