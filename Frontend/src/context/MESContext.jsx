@@ -418,11 +418,21 @@ export function MESProvider({ children }) {
   // PAGE NAVIGATION
   // ========================================
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = async () => {
+    if (mesState?.mode === "arrived") {
+      const result = await sendCommand("open instructions");
+      if (!result?.ok) return result;
+    }
+
     return sendCommand("previous page");
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = async () => {
+    if (mesState?.mode === "arrived") {
+      const result = await sendCommand("open instructions");
+      if (!result?.ok) return result;
+    }
+
     return sendCommand("next page");
   };
 
