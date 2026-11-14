@@ -94,11 +94,16 @@ function SupervisorPage() {
 
   const styles = {
     page: {
-      minHeight: "100dvh",
+      height: "100dvh",
+      minHeight: 0,
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
       backgroundColor: "#F9FAFB",
       color: "#18181B",
       fontFamily: "Arial, sans-serif",
-      padding: isCompact ? "12px" : "24px",
+      padding: isKiosk ? "6px 8px" : isCompact ? "10px" : "16px",
       boxSizing: "border-box",
     },
 
@@ -107,19 +112,21 @@ function SupervisorPage() {
       alignItems: "center",
       justifyContent: "space-between",
       gap: "12px",
-      flexWrap: "wrap",
-      marginBottom: "18px",
+      flexWrap: "nowrap",
+      flexShrink: 0,
+      minHeight: 0,
+      marginBottom: isKiosk ? "6px" : "12px",
     },
 
     heading: {
       margin: 0,
-      fontSize: isCompact ? "20px" : "28px",
+      fontSize: isKiosk ? "15px" : isCompact ? "19px" : "25px",
     },
 
     subtitle: {
       color: "#71717A",
-      fontSize: "13px",
-      marginTop: "5px",
+      fontSize: isKiosk ? "10px" : "12px",
+      marginTop: isKiosk ? "2px" : "5px",
     },
 
     backButton: {
@@ -129,7 +136,9 @@ function SupervisorPage() {
       backgroundColor: "#F4F4F5",
       border: "1px solid #D4D4D8",
       color: "#18181B",
-      padding: "10px 14px",
+      padding: isKiosk ? "6px 8px" : "10px 14px",
+      fontSize: isKiosk ? "11px" : "13px",
+      whiteSpace: "nowrap",
       borderRadius: "8px",
       cursor: "pointer",
     },
@@ -137,46 +146,64 @@ function SupervisorPage() {
     connection: {
       color: connected ? "#16A34A" : "#DC2626",
       fontWeight: "bold",
-      fontSize: "13px",
+      fontSize: isKiosk ? "10px" : "13px",
+      whiteSpace: "nowrap",
     },
 
     grid: {
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
-      gap: "16px",
-      alignItems: "start",
+      gridTemplateColumns: isKiosk
+        ? "repeat(3, minmax(0, 1fr))"
+        : isMobile
+          ? "1fr"
+          : "repeat(3, minmax(0, 1fr))",
+      gridTemplateRows:
+        isMobile && !isKiosk ? "none" : "repeat(2, minmax(0, 1fr))",
+      gridAutoRows:
+        isMobile && !isKiosk ? "minmax(190px, auto)" : "minmax(0, 1fr)",
+      flex: 1,
+      minHeight: 0,
+      minWidth: 0,
+      overflowY: isMobile && !isKiosk ? "auto" : "hidden",
+      gap: isKiosk ? "6px" : "12px",
+      alignItems: "stretch",
     },
 
     card: {
       backgroundColor: "#FFFFFF",
       border: "1px solid #E4E4E7",
-      borderRadius: "12px",
-      padding: "16px",
+      borderRadius: isKiosk ? "7px" : "12px",
+      padding: isKiosk ? "7px" : "12px",
       minWidth: 0,
+      minHeight: 0,
+      overflowY: "auto",
+      overflowX: "hidden",
+      scrollbarWidth: "thin",
+      boxSizing: "border-box",
     },
 
     cardTitle: {
       display: "flex",
       alignItems: "center",
       gap: "8px",
-      margin: "0 0 14px",
-      fontSize: "16px",
+      margin: isKiosk ? "0 0 7px" : "0 0 12px",
+      fontSize: isKiosk ? "12px" : "15px",
     },
 
     stats: {
       display: "grid",
       gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-      gap: "12px",
+      gap: isKiosk ? "5px" : "12px",
     },
 
     statLabel: {
       color: "#71717A",
-      fontSize: "12px",
-      marginBottom: "5px",
+      fontSize: isKiosk ? "10px" : "12px",
+      marginBottom: isKiosk ? "2px" : "5px",
     },
 
     statValue: {
-      fontSize: isCompact ? "16px" : "20px",
+      fontSize: isKiosk ? "13px" : isCompact ? "16px" : "20px",
       fontWeight: "bold",
     },
 
@@ -185,7 +212,7 @@ function SupervisorPage() {
       backgroundColor: "#E4E4E7",
       borderRadius: "10px",
       overflow: "hidden",
-      marginTop: "12px",
+      marginTop: isKiosk ? "5px" : "12px",
     },
 
     progressFill: {
@@ -204,7 +231,7 @@ function SupervisorPage() {
       height: "12px",
       backgroundColor: "#E4E4E7",
       borderRadius: "999px",
-      marginTop: "12px",
+      marginTop: isKiosk ? "6px" : "12px",
       overflow: "visible",
     },
 
@@ -218,10 +245,10 @@ function SupervisorPage() {
 
     checkpointLegend: {
       display: "flex",
-      gap: "12px",
+      gap: isKiosk ? "5px" : "12px",
       flexWrap: "wrap",
-      marginTop: "13px",
-      fontSize: "11px",
+      marginTop: isKiosk ? "6px" : "13px",
+      fontSize: isKiosk ? "9px" : "11px",
       color: "#71717A",
     },
 
@@ -232,9 +259,9 @@ function SupervisorPage() {
       color: "#18181B",
       border: "1px solid #D4D4D8",
       borderRadius: "7px",
-      padding: "10px",
-      fontSize: "14px",
-      marginBottom: "10px",
+      padding: isKiosk ? "6px" : "10px",
+      fontSize: isKiosk ? "11px" : "14px",
+      marginBottom: isKiosk ? "5px" : "10px",
     },
 
     button: {
@@ -246,10 +273,10 @@ function SupervisorPage() {
       borderRadius: "7px",
       backgroundColor: "#2563EB",
       color: "#FFFFFF",
-      padding: "10px 14px",
+      padding: isKiosk ? "6px 8px" : "10px 14px",
       cursor: "pointer",
       fontWeight: "bold",
-      fontSize: "13px",
+      fontSize: isKiosk ? "10px" : "13px",
     },
 
     dangerButton: {
@@ -261,27 +288,29 @@ function SupervisorPage() {
     },
 
     logContainer: {
-      maxHeight: "280px",
+      maxHeight: "100%",
+      minHeight: 0,
       overflowY: "auto",
       display: "flex",
       flexDirection: "column",
-      gap: "8px",
+      gap: isKiosk ? "4px" : "8px",
     },
 
     logEntry: {
-      padding: "9px",
+      padding: isKiosk ? "5px" : "9px",
       backgroundColor: "#F9FAFB",
       borderRadius: "6px",
       border: "1px solid #E4E4E7",
-      fontSize: "12px",
+      fontSize: isKiosk ? "10px" : "12px",
     },
 
     feedback: {
-      margin: "12px 0",
-      padding: "10px",
+      margin: isKiosk ? "0 0 5px" : "8px 0",
+      padding: isKiosk ? "5px" : "10px",
       backgroundColor: "#EFF6FF",
       borderRadius: "7px",
-      fontSize: "13px",
+      fontSize: isKiosk ? "10px" : "13px",
+      flexShrink: 0,
     },
   };
 
@@ -480,7 +509,7 @@ function SupervisorPage() {
             </div>
           </div>
 
-          <div style={{ marginTop: "16px" }}>
+          <div style={{ marginTop: isKiosk ? "8px" : "16px" }}>
             <div style={styles.statLabel}>
               Operation Progress: {progress.signed}/{progress.total} steps (
               {progressPercent}%)
@@ -492,7 +521,7 @@ function SupervisorPage() {
             {/* =====================================
                 CURRENT PAGE APPROVAL CHECKPOINTS
                 ===================================== */}
-            <div style={{ marginTop: "19px" }}>
+            <div style={{ marginTop: isKiosk ? "8px" : "19px" }}>
               <div style={styles.statLabel}>
                 Page {currentPage.number ?? "—"} checkpoints: {pageSignedCount}/
                 {pageSteps.length} steps

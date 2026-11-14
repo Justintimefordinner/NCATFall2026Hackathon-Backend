@@ -3,7 +3,7 @@
   "part_rev": "B",
   "serial": "SN-0042",
   "operation": "Op 10: Base assembly",
-  "operator": "J. Wright",
+  "operator": "B. Morbius",
   "pages": [
     {"number": 1, "title": "Tie Rod", "steps": [
       {"number": 1, "text": "Place Tie Rod in Mount", "image": "p1s1.jpg", "inspector_required": false},
