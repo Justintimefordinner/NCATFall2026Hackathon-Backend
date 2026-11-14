@@ -64,7 +64,13 @@ def command():
         confidence = float(b.get("confidence", 1.0))
     except (TypeError, ValueError):
         abort(400, "'confidence' must be a number")
-    return run(parse(text, confidence, b.get("source", "debug")))
+    score = b.get("speaker_score")
+    try:
+        score = None if score is None else float(score)
+    except (TypeError, ValueError):
+        abort(400, "'speaker_score' must be a number or null")
+    return run(parse(text, confidence, b.get("source", "debug"),
+                     role=b.get("role"), speaker_score=score))
 
 
 # ---------- supervisor ----------

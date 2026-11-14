@@ -14,5 +14,10 @@ FRONTEND_DIST = os.environ.get(
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("MES_PORT", "5000"))
 
+# Spoken supervisor challenge. The voice process accepts a speaker at 0.45;
+# answering a challenge needs a much closer match. Tune down on the floor if needed.
+SUPERVISOR_VOICE_THRESHOLD = float(os.environ.get("MES_SUPERVISOR_VOICE", "0.65"))
+CHALLENGE_TTL = 15     # seconds
+
 LOG_CAP = 200          # entries kept in memory
 LOG_SENT = 50          # entries pushed to clients

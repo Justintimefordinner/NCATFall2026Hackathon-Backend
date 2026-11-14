@@ -4,6 +4,8 @@ dispatch() is the only way state changes. snapshot() and lights() are the only
 views clients ever see.
 """
 import json
+import random
+import re
 import threading
 import time
 
@@ -13,6 +15,13 @@ from models import (
     POWER, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, UNKNOWN,
     VIEWING, WORKING, Command, LogEntry, Result,
 )
+from parser import normalize
+
+# challenge phrases: a color and a number, easy to say and hard to mishear
+CHALLENGE_COLORS = ["red", "blue", "green", "yellow", "orange", "purple", "white", "black"]
+CHALLENGE_NUMBERS = ["two", "three", "five", "six", "seven", "nine", "ten"]
+SIGNOFF, CLEAR = "signoff", "clear_alert"      # challenge actions
+SUPERVISOR = "supervisor"                      # role name from the voice process
 
 
 class MES:
@@ -38,19 +47,25 @@ class MES:
         self.quality_alert = None
         self.labor_started_at = None
         self.labor_accum = 0.0
+        self.challenge = None           # {"phrase", "action", "expires_at"} while open
         self.log = []
 
     # ---------- entry point ----------
     def dispatch(self, cmd: Command) -> Result:
         with self.lock:
+            self._expire_challenge()
+            answering = self.challenge is not None and cmd.source == "voice" and self.listening
             res = self._check(cmd)
-            self._log(cmd, res)
+            self._log(cmd, res, answering)
             return res
 
     def _check(self, cmd):
         # 1. voice while listening is off: ignore (still logged)
         if cmd.source == "voice" and not self.listening:
             return Result(False, "Ignored, listening off", speak=False)
+        # 1b. open supervisor challenge: the next utterance is the answer, whatever it is
+        if self.challenge is not None and cmd.source == "voice":
+            return self._answer_challenge(cmd)
         # 2. unknown or low confidence
         if cmd.intent == UNKNOWN or cmd.confidence < config.CONFIDENCE_THRESHOLD:
             return Result(False, "Try again")
@@ -194,20 +209,65 @@ class MES:
         if cmd.args.get("pin") != config.PIN:
             return Result(False, "Wrong PIN", speak=False)
         if cmd.intent == QUALITY_ACK:
-            if not self.quality_alert:
-                return Result(False, "No open quality alert", speak=False)
-            self.quality_alert = None
-            return Result(True, "Quality alert cleared")
+            return self._clear_alert()
         if cmd.intent == INSPECTOR_SIGNOFF:
-            if not self.pending_inspector:
-                return Result(False, "No step waiting on inspector", speak=False)
-            key = self._pick_pending(cmd.args)
-            if key is None:
-                return Result(False, "That step is not waiting on inspector", speak=False)
-            self.pending_inspector.remove(key)
-            self._sign(key, "supervisor")
-            return self._after_sign(Result(True, f"Step {key[1]} signed off by supervisor"))
+            return self._inspector_signoff(cmd.args)
         return Result(False, "Try again")
+
+    # shared by the PIN routes and a passed voice challenge
+    def _clear_alert(self):
+        if not self.quality_alert:
+            return Result(False, "No open quality alert", speak=False)
+        self.quality_alert = None
+        return Result(True, "Quality alert cleared")
+
+    def _inspector_signoff(self, args):
+        if not self.pending_inspector:
+            return Result(False, "No step waiting on inspector", speak=False)
+        key = self._pick_pending(args)
+        if key is None:
+            return Result(False, "That step is not waiting on inspector", speak=False)
+        self.pending_inspector.remove(key)
+        self._sign(key, "supervisor")
+        return self._after_sign(Result(True, f"Step {key[1]} signed off by supervisor"))
+
+    # ---------- supervisor voice ----------
+    def _on_supervisor_confirm(self, cmd):
+        if cmd.role != SUPERVISOR:
+            return Result(False, "Supervisor must sign off")
+        if not self.pending_inspector:
+            return Result(False, "No step waiting on inspector")
+        return self._open_challenge(SIGNOFF)
+
+    def _on_clear_alert(self, cmd):
+        if cmd.role != SUPERVISOR:
+            if self.quality_alert:
+                return Result(False, "Quality alert open. Supervisor must clear it")
+            return Result(False, "No open quality alert")
+        if not self.quality_alert:
+            return Result(False, "No open quality alert")
+        return self._open_challenge(CLEAR)
+
+    def _open_challenge(self, action):
+        phrase = f"{random.choice(CHALLENGE_COLORS)} {random.choice(CHALLENGE_NUMBERS)}"
+        self.challenge = {"phrase": phrase, "action": action,
+                          "expires_at": time.time() + config.CHALLENGE_TTL}
+        return Result(True, f"Supervisor, confirm with: {phrase}")
+
+    def _answer_challenge(self, cmd):
+        ch, self.challenge = self.challenge, None          # one try, pass or fail
+        words_ok = re.search(rf"\b{normalize(ch['phrase'])}\b", normalize(cmd.raw)) is not None
+        voice_ok = (cmd.role == SUPERVISOR and cmd.speaker_score is not None
+                    and cmd.speaker_score >= config.SUPERVISOR_VOICE_THRESHOLD)
+        if not (words_ok and voice_ok and time.time() <= ch["expires_at"]):
+            return Result(False, "Supervisor voice not recognized")
+        if ch["action"] == SIGNOFF:
+            return self._inspector_signoff({})
+        return self._clear_alert()
+
+    def _expire_challenge(self):
+        if self.challenge and time.time() > self.challenge["expires_at"]:
+            self.challenge = None
 
     # ---------- helpers ----------
     def _step(self, page, n):
@@ -249,9 +309,14 @@ class MES:
         key = (int(page), int(step))
         return key if key in self.pending_inspector else None
 
-    def _log(self, cmd, res):
-        self.log.append(LogEntry(time.time(), cmd.source, cmd.raw or cmd.intent,
-                                 res.ok, res.message))
+    def _log(self, cmd, res, answering=False):
+        source, score = cmd.source, None
+        if cmd.source == "voice":
+            score = cmd.speaker_score
+            if answering or cmd.role == SUPERVISOR:
+                source = "supervisor_voice"
+        self.log.append(LogEntry(time.time(), source, cmd.raw or cmd.intent,
+                                 res.ok, res.message, score))
         if len(self.log) > config.LOG_CAP:
             del self.log[:-config.LOG_CAP]
 
@@ -301,9 +366,16 @@ class MES:
                 "pending_inspector": [{"page": p, "step": s} for p, s in self.pending_inspector],
                 "progress": {"signed": len(self.signed), "total": self.total_steps},
                 "quality_alert": self.quality_alert,
+                "supervisor_challenge": self._challenge_view(),
                 "last": vars(self.log[-1]).copy() if self.log else None,
                 "log": [vars(e).copy() for e in self.log[-config.LOG_SENT:]],
             }
+
+    def _challenge_view(self):
+        ch = self.challenge
+        if ch is None or time.time() > ch["expires_at"]:
+            return None
+        return dict(ch)
 
     def lights(self):
         """Panel LED states for the ESP32."""
