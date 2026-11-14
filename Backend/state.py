@@ -12,7 +12,7 @@ import time
 import config
 from models import (
     ARRIVED, BLOCKED_BY_ALERT, COMPLETE, IDLE, INSPECTOR_SIGNOFF, LISTEN_TOGGLE,
-    POWER, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, UNKNOWN,
+    POWER, POWER_OFF, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, UNKNOWN,
     VIEWING, WORKING, Command, LogEntry, Result,
 )
 from parser import normalize
@@ -69,8 +69,8 @@ class MES:
         # 2. unknown or low confidence
         if cmd.intent == UNKNOWN or cmd.confidence < config.CONFIDENCE_THRESHOLD:
             return Result(False, "Try again")
-        # 3. idle only accepts power, listen, reset
-        if self.mode == IDLE and cmd.intent not in (POWER, LISTEN_TOGGLE, RESET):
+        # 3. idle (standby) only accepts power, power off, reset; listen is ignored
+        if self.mode == IDLE and cmd.intent not in (POWER, POWER_OFF, RESET):
             return Result(False, "Press power to start", speak=False)
         # 4. supervisor inputs work in any mode
         if cmd.intent in SUPERVISOR_INTENTS:
@@ -88,8 +88,24 @@ class MES:
     def _on_power(self, cmd):
         if self.mode != IDLE:
             return Result(True, "Already on", speak=False)
+        if len(self.signed) == self.total_steps:      # was finished before going to standby
+            self.mode = COMPLETE
+            return Result(True, "Operation complete")
         self.mode = ARRIVED
         return Result(True, "Incomplete operation. Start labor or open instructions?")
+
+    def _on_power_off(self, cmd):
+        """Long press: back to standby (idle). Progress, alerts and pending
+        inspector steps are kept; power on again resumes the operation."""
+        if self.mode == IDLE:
+            return Result(True, "Already off", speak=False)
+        if self.labor_started_at is not None:          # don't bill time while off
+            self.labor_accum += time.time() - self.labor_started_at
+            self.labor_started_at = None
+        self.listening = False
+        self.challenge = None
+        self.mode = IDLE
+        return Result(True, "Station off")
 
     def _on_listen_toggle(self, cmd):
         self.listening = not self.listening
@@ -385,5 +401,6 @@ class MES:
                 "listening": self.listening,
                 "labor": self.labor_started_at is not None,
                 "alert": self.quality_alert is not None,
+                "inspector": bool(self.pending_inspector),   # amber flash on the panel
                 "complete": self.mode == COMPLETE,
             }

@@ -56,6 +56,13 @@ def test_malformed_json_is_400(client):
     assert client.post("/api/panel/button", json={"id": "self_destruct"}).status_code == 400
 
 
+def test_power_off_over_http_and_ws_ids(client):
+    post(client, "/api/panel/button", {"id": "power"})
+    r = post(client, "/api/panel/button", {"id": "power_off"})
+    assert r["message"] == "Station off" and r["lights"]["power"] is False
+    assert client.get("/api/state").get_json()["mode"] == "idle"
+
+
 def test_lights_route(client):
     assert client.get("/api/panel/lights").get_json()["power"] is False
 

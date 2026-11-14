@@ -46,10 +46,12 @@ def test_unknown_is_try_again(working):
     assert working.dispatch(cmd(UNKNOWN)).message == "Try again"
 
 
-def test_idle_only_accepts_power_listen_reset(m):
+def test_idle_only_accepts_power_and_reset(m):
     r = m.dispatch(cmd(START_LABOR))
     assert r.message == "Press power to start" and m.mode == IDLE
-    assert m.dispatch(cmd(LISTEN_TOGGLE, "panel")).ok and m.listening
+    r = m.dispatch(cmd(LISTEN_TOGGLE, "panel"))           # listen is ignored in standby
+    assert r.ok is False and not r.speak and m.listening is False
+    assert m.lights()["listening"] is False
     assert m.dispatch(cmd(QUALITY_TRIGGER, "supervisor", message="x")).ok is False
 
 
@@ -272,4 +274,44 @@ def test_log_cap(m):
 
 def test_lights(working):
     assert working.lights() == {"power": True, "listening": False, "labor": True,
-                                "alert": False, "complete": False}
+                                "alert": False, "inspector": False, "complete": False}
+    working.dispatch(cmd(SIGN_STEP, step=2))
+    assert working.lights()["inspector"] is True
+    working.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
+    assert working.lights()["inspector"] is False
+
+
+# ---------- power off (long press) ----------
+def test_power_off_goes_to_standby_and_keeps_progress(working):
+    working.dispatch(cmd(LISTEN_TOGGLE, "panel"))
+    working.dispatch(cmd(SIGN_STEP, step=1))
+    working.labor_started_at -= 30
+    r = working.dispatch(cmd(POWER_OFF, "panel"))
+    assert r.ok and r.message == "Station off"
+    assert working.mode == IDLE and working.listening is False
+    assert working.snapshot()["labor"] == {"running": False, "seconds": 30}
+    assert (1, 1) in working.signed
+    # while off, the tech can't do anything but power on
+    assert working.dispatch(cmd(START_LABOR)).message == "Press power to start"
+    r = working.dispatch(cmd(POWER, "panel"))
+    assert r.message == "Incomplete operation. Start labor or open instructions?"
+    assert working.mode == ARRIVED and (1, 1) in working.signed
+
+
+def test_power_off_when_already_off(m):
+    r = m.dispatch(cmd(POWER_OFF, "panel"))
+    assert r.ok and r.message == "Already off" and not r.speak and m.mode == IDLE
+
+
+def test_power_off_closes_supervisor_challenge(working):
+    working.dispatch(cmd(SIGN_STEP, step=2))
+    working.challenge = {"phrase": "red two", "action": "signoff", "expires_at": 1e18}
+    working.dispatch(cmd(POWER_OFF, "panel"))
+    assert working.challenge is None and working.pending_inspector == [(1, 2)]
+
+
+def test_power_on_after_finishing_resumes_complete(working):
+    _finish(working)
+    working.dispatch(cmd(POWER_OFF, "panel"))
+    assert working.dispatch(cmd(POWER, "panel")).message == "Operation complete"
+    assert working.mode == COMPLETE

@@ -1,0 +1,19 @@
+{
+  "work_order": "WO-1001",
+  "part_rev": "B",
+  "serial": "SN-0042",
+  "operation": "Op 10: Base assembly",
+  "operator": "J. Wright",
+  "pages": [
+    {"number": 1, "title": "Base plate", "steps": [
+      {"number": 1, "text": "Place 2x8 grey plate", "image": "p1s1.jpg", "inspector_required": false},
+      {"number": 2, "text": "Attach 2x2 red brick at corner", "image": "p1s2.jpg", "inspector_required": true},
+      {"number": 3, "text": "Attach 2x2 red brick at opposite corner", "image": "p1s3.jpg", "inspector_required": false}
+    ]},
+    {"number": 2, "title": "Walls", "steps": [
+      {"number": 1, "text": "Stack 1x4 blue bricks along long edge", "image": "p2s1.jpg", "inspector_required": false},
+      {"number": 2, "text": "Stack 1x4 blue bricks along short edge", "image": "p2s2.jpg", "inspector_required": false},
+      {"number": 3, "text": "Cap walls with 1x8 white plate", "image": "p2s3.jpg", "inspector_required": false}
+    ]}
+  ]
+}
