@@ -1,0 +1,68 @@
+/* ========================================
+   GLOBAL RESET
+======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  background-color: #08111f;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+/* ========================================
+   RESPONSIVE MEDIA ELEMENTS
+======================================== */
+
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+/* ========================================
+   TOUCHSCREEN OPTIMIZATION
+======================================== */
+
+button {
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+button,
+input,
+select {
+  max-width: 100%;
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+======================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08111f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
