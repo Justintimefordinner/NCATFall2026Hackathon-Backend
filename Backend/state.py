@@ -112,6 +112,10 @@ class MES:
             return Result(False, "Say start labor or open instructions")
         if self.page >= len(self.pages):
             return Result(False, "No next page")
+        # while working, can't leave a page with an inspector step still open
+        # (reading ahead in VIEWING is fine; signing is gated separately)
+        if self.mode == WORKING and (gate := self._gate_before(self.page + 1, 0)):
+            return self._gate_result(gate, "before the next page")
         self.page += 1
         return Result(True, f"Page {self.page}")
 
@@ -134,6 +138,8 @@ class MES:
         key = (self.page, n)
         if key in self.signed:
             return Result(False, f"Step {n} already signed off")
+        if (gate := self._gate_before(self.page, n)):
+            return self._gate_result(gate, "before you continue")
         if step["inspector_required"]:
             if key not in self.pending_inspector:
                 self.pending_inspector.append(key)
@@ -144,21 +150,23 @@ class MES:
     def _on_sign_page(self, cmd):
         if (r := self._can_sign()):
             return r
-        held = []
+        if (gate := self._gate_before(self.page, 0)):     # open gate on an earlier page
+            return self._gate_result(gate, "before you continue")
+        # sign in order, stopping at the first inspector step
         for step in self.pages[self.page - 1]["steps"]:
             key = (self.page, step["number"])
             if key in self.signed:
                 continue
             if step["inspector_required"]:
-                held.append(step["number"])
                 if key not in self.pending_inspector:
                     self.pending_inspector.append(key)
-            else:
-                self._sign(key, "tech")
-        msg = f"Page {self.page} signed off"
-        if held:
-            msg += ". Step " + ", ".join(map(str, held)) + " needs supervisor sign-off"
-        return self._after_sign(Result(True, msg))
+                done = [s["number"] for s in self.pages[self.page - 1]["steps"]
+                        if (self.page, s["number"]) in self.signed]
+                msg = (f"Signed off through step {max(done)}. " if done else "")
+                return self._after_sign(Result(
+                    bool(done), msg + f"Step {step['number']} needs supervisor sign-off"))
+            self._sign(key, "tech")
+        return self._after_sign(Result(True, f"Page {self.page} signed off"))
 
     def _can_sign(self):
         if self.mode == ARRIVED:
@@ -209,6 +217,25 @@ class MES:
             if step["number"] == n:
                 return step
         return None
+
+    def _gate_before(self, page, n):
+        """First inspector step before (page, n), in build order, that the
+        supervisor hasn't signed. n=0 means 'before the start of page'."""
+        for p in self.pages:
+            for s in p["steps"]:
+                key = (p["number"], s["number"])
+                if key >= (page, n):
+                    return None
+                if s["inspector_required"] and key not in self.signed:
+                    return key
+        return None
+
+    def _gate_result(self, gate, when):
+        # the tech has reached this step, so put it in front of the supervisor
+        if gate not in self.pending_inspector:
+            self.pending_inspector.append(gate)
+        where = f"Step {gate[1]}" if gate[0] == self.page else f"Page {gate[0]} step {gate[1]}"
+        return Result(False, f"{where} needs supervisor sign-off {when}")
 
     def _sign(self, key, by):
         self.signed.add(key)

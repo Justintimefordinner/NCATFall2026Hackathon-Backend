@@ -276,8 +276,9 @@ class MES:
 
 Still to write: `reset()` (reload JSON, set every field to its start value), `_step()`, `_sign()`, `_pick_pending()`, `_log()`, `total_steps`, `snapshot()` and `lights()`. `_log()` appends a `LogEntry` with `cmd.raw` or the intent name as `input`.
 
-Three details that matter:
+Four details that matter:
 
+- **Inspector steps are gates.** The tech can't move past an inspector step until the supervisor signs it. `sign_step` on any later step (same page or a later page) is refused, `sign_page` signs in order and stops at the inspector step, and `next_page` is refused while `working` if the current or an earlier page has an unsigned inspector step. Reading ahead in `viewing` is still allowed. Hitting a gate adds that step to `pending_inspector` so it shows up on the supervisor screen.
 - **`_after_sign` runs on every sign path**, including supervisor sign-off, so a supervisor PIN on the last inspector step finishes the assembly.
 - **Supervisor sign-off is not blocked by a quality alert.** Check 4 runs before check 5. If the team wants alerts to block inspector sign-offs too, add a check inside `_supervisor`.
 - **Keep `dispatch` fast.** No network or audio calls inside the lock. `app.py` broadcasts after `dispatch` returns.

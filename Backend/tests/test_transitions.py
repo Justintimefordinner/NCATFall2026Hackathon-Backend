@@ -86,6 +86,8 @@ def test_open_instructions_when_already_open(working):
 
 # ---------- navigation ----------
 def test_page_bounds(working):
+    working.dispatch(cmd(SIGN_STEP, step=2))
+    working.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
     assert working.dispatch(cmd(PREV_PAGE)).message == "No previous page"
     assert working.dispatch(cmd(NEXT_PAGE)).message == "Page 2"
     assert working.dispatch(cmd(NEXT_PAGE)).message == "No next page"
@@ -120,11 +122,62 @@ def test_inspector_step_not_queued_twice(working):
     assert working.pending_inspector == [(1, 2)]
 
 
-def test_sign_page_holds_inspector_steps(working):
+def test_sign_page_stops_at_inspector_step(working):
     r = working.dispatch(cmd(SIGN_PAGE))
-    assert r.message == "Page 1 signed off. Step 2 needs supervisor sign-off"
-    assert working.signed == {(1, 1), (1, 3)} and working.pending_inspector == [(1, 2)]
+    assert r.message == "Signed off through step 1. Step 2 needs supervisor sign-off"
+    assert working.signed == {(1, 1)} and working.pending_inspector == [(1, 2)]
     assert working.snapshot()["page"]["all_signed"] is False
+
+
+def test_sign_page_first_step_is_inspector(m, tmp_path):
+    import json
+    data = json.load(open(config.DATA_PATH))
+    data["pages"][0]["steps"][0]["inspector_required"] = True
+    path = tmp_path / "op.json"
+    path.write_text(json.dumps(data))
+    m = MES(str(path))
+    m.dispatch(cmd(POWER, "panel")); m.dispatch(cmd(START_LABOR))
+    r = m.dispatch(cmd(SIGN_PAGE))
+    assert r.ok is False and r.message == "Step 1 needs supervisor sign-off"
+    assert m.signed == set() and m.pending_inspector == [(1, 1)]
+
+
+# ---------- inspector gate: can't move past an unsigned inspector step ----------
+def test_cannot_sign_step_after_inspector_step(working):
+    working.dispatch(cmd(SIGN_STEP, step=1))
+    r = working.dispatch(cmd(SIGN_STEP, step=3))          # skipped inspector step 2
+    assert r.ok is False and r.message == "Step 2 needs supervisor sign-off before you continue"
+    assert (1, 3) not in working.signed
+    assert working.pending_inspector == [(1, 2)]           # queued for the supervisor
+
+
+def test_pending_inspector_step_still_blocks(working):
+    working.dispatch(cmd(SIGN_STEP, step=2))               # tech claims it, supervisor hasn't signed
+    assert working.dispatch(cmd(SIGN_STEP, step=3)).ok is False
+    working.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
+    assert working.dispatch(cmd(SIGN_STEP, step=3)).message == "Step 3 signed off"
+
+
+def test_cannot_go_to_next_page_while_working(working):
+    r = working.dispatch(cmd(NEXT_PAGE))
+    assert r.ok is False and r.message == "Step 2 needs supervisor sign-off before the next page"
+    assert working.page == 1 and working.pending_inspector == [(1, 2)]
+    working.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
+    assert working.dispatch(cmd(NEXT_PAGE)).message == "Page 2"
+
+
+def test_read_ahead_then_sign_later_page_is_blocked(m):
+    m.dispatch(cmd(POWER, "panel"))
+    m.dispatch(cmd(OPEN_INSTRUCTIONS))
+    assert m.dispatch(cmd(NEXT_PAGE)).ok                   # reading ahead is allowed
+    m.dispatch(cmd(START_LABOR))
+    r = m.dispatch(cmd(SIGN_STEP, step=1))
+    assert r.message == "Page 1 step 2 needs supervisor sign-off before you continue"
+    assert m.dispatch(cmd(SIGN_PAGE)).ok is False and m.signed == set()
+
+
+def test_steps_before_inspector_step_are_not_gated(working):
+    assert working.dispatch(cmd(SIGN_STEP, step=1)).ok
 
 
 def test_sign_after_complete(working):
@@ -134,8 +187,9 @@ def test_sign_after_complete(working):
 
 
 def _finish(m):
-    m.dispatch(cmd(SIGN_PAGE))
+    m.dispatch(cmd(SIGN_PAGE))                     # stops at inspector step 2
     m.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
+    m.dispatch(cmd(SIGN_PAGE))                     # now signs step 3
     m.dispatch(cmd(NEXT_PAGE))
     m.dispatch(cmd(SIGN_PAGE))
     assert m.mode == COMPLETE
@@ -181,15 +235,22 @@ def test_inspector_signoff_not_blocked_by_alert(working):
 
 
 def test_supervisor_finishes_assembly(working):
-    working.dispatch(cmd(SIGN_STEP, step=2))              # queue inspector step
-    working.dispatch(cmd(SIGN_STEP, step=1))
-    working.dispatch(cmd(SIGN_STEP, step=3))
-    working.dispatch(cmd(NEXT_PAGE))
-    working.dispatch(cmd(SIGN_PAGE))
-    assert working.mode == WORKING                        # (1, 2) still open
-    r = working.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
-    assert r.message == "Step 2 signed off by supervisor. Assembly complete"
-    assert working.mode == COMPLETE
+    # make the very last step the inspector step, so the supervisor's PIN finishes it
+    import json, tempfile, os
+    data = json.load(open(config.DATA_PATH))
+    for p in data["pages"]:
+        for s in p["steps"]:
+            s["inspector_required"] = False
+    data["pages"][-1]["steps"][-1]["inspector_required"] = True
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(data, f)
+    m = MES(f.name); os.unlink(f.name)
+    m.dispatch(cmd(POWER, "panel")); m.dispatch(cmd(START_LABOR))
+    m.dispatch(cmd(SIGN_PAGE)); m.dispatch(cmd(NEXT_PAGE)); m.dispatch(cmd(SIGN_PAGE))
+    assert m.mode == WORKING and m.pending_inspector == [(2, 3)]
+    r = m.dispatch(cmd(INSPECTOR_SIGNOFF, "supervisor", pin=config.PIN))
+    assert r.message == "Step 3 signed off by supervisor. Assembly complete"
+    assert m.mode == COMPLETE
 
 
 def test_reset(working):
