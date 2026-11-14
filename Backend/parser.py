@@ -8,7 +8,7 @@ import re
 
 from models import (
     CLEAR_ALERT, SUPERVISOR_CONFIRM, NEXT_PAGE, OPEN_INSTRUCTIONS, PREV_PAGE, SIGN_PAGE, SIGN_STEP, START_LABOR,
-    STOP_LABOR, UNKNOWN, Command,
+    STOP_LABOR, THANK_JUDGES, UNKNOWN, Command,
 )
 
 NUMBER_WORDS = {"one": 1, "won": 1, "two": 2, "to": 2, "too": 2, "three": 3, "four": 4,
@@ -24,9 +24,12 @@ PHRASES = {
     SIGN_PAGE:         ["page done", "sign off page", "page complete", "all done"],
     SUPERVISOR_CONFIRM: ["supervisor confirm", "supervisor sign off", "inspector sign off"],
     CLEAR_ALERT:       ["clear quality alert", "clear alert", "acknowledge alert"],
+    THANK_JUDGES:      ["what do you say to our judges", "what do you say to the judges",
+                        "say to our judges", "say to the judges", "thank the judges",
+                        "our judges", "the judges"],
 }
 # checked before the step patterns, so "inspector sign off step 2" isn't a tech sign-off
-PRIORITY = (SUPERVISOR_CONFIRM, CLEAR_ALERT)
+PRIORITY = (THANK_JUDGES, SUPERVISOR_CONFIRM, CLEAR_ALERT)
 
 # "step X done" carries a number, so it is matched with patterns, not the table.
 STEP_PATTERNS = [r"\bstep (\d+) (done|complete|finished)\b", r"\bsign off step (\d+)\b",
@@ -34,14 +37,15 @@ STEP_PATTERNS = [r"\bstep (\d+) (done|complete|finished)\b", r"\bsign off step (
 
 FUZZY_CUTOFF = 0.75
 
-# precomputed: longest phrases first within each intent, and a flat phrase -> intent map
-_ORDERED = {i: sorted(ps, key=len, reverse=True) for i, ps in PHRASES.items()}
-_LOOKUP = {p: i for i, ps in PHRASES.items() for p in ps}
-
-
 def normalize(text):
     t = re.sub(r"[^a-z0-9 ]", " ", (text or "").lower())
     return " ".join(str(NUMBER_WORDS.get(w, w)) for w in t.split())
+
+
+# precomputed: longest phrases first within each intent, and a flat phrase -> intent map.
+# Phrases are normalized like transcripts, so "say to our judges" matches ("to" -> "2").
+_ORDERED = {i: sorted({normalize(p) for p in ps}, key=len, reverse=True) for i, ps in PHRASES.items()}
+_LOOKUP = {p: i for i, ps in _ORDERED.items() for p in ps}
 
 
 def parse(text, confidence=1.0, source="voice", role=None, speaker_score=None):

@@ -74,3 +74,11 @@ def test_no_phrase_inside_another_intents_phrase():
             for p in ps:
                 for q in qs:
                     assert not re.search(rf"\b{p}\b", q), f"{p!r} ({i}) is inside {q!r} ({j})"
+
+
+# ---------- easter egg ----------
+@pytest.mark.parametrize("text", ["What do you say to our judges?", "what do you say to the judges",
+                                  "bench, say to our judges", "thank the judges",
+                                  "what do you say to our judge"])      # fuzzy: STT drops the s
+def test_thank_judges(text):
+    assert parse(text).intent == THANK_JUDGES

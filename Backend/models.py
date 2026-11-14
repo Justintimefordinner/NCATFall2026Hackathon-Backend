@@ -10,6 +10,8 @@ NEXT_PAGE, PREV_PAGE = "next_page", "prev_page"
 SIGN_STEP, SIGN_PAGE, UNKNOWN = "sign_step", "sign_page", "unknown"
 # supervisor voice intents (open a spoken challenge; PIN routes stay separate)
 SUPERVISOR_CONFIRM, CLEAR_ALERT = "supervisor_confirm", "clear_alert"
+# easter egg: "what do you say to our judges?" (works in any mode)
+THANK_JUDGES = "thank_judges"
 # panel intents
 POWER, POWER_OFF, LISTEN_TOGGLE = "power", "power_off", "listen_toggle"   # power_off = long press
 # supervisor intents

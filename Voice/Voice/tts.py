@@ -208,6 +208,7 @@ FIXED = [
     "This step requires supervisor sign-off", "Quality alert open. Supervisor must clear it",
     "Quality alert cleared", "No open quality alert", "Supervisor must sign off",
     "No step waiting on inspector", "Supervisor voice not recognized",
+    "Thank you for your time and consideration",
 ]
 CHALLENGE_COLORS = ["red", "blue", "green", "yellow", "orange", "purple", "white", "black"]
 CHALLENGE_NUMBERS = ["two", "three", "five", "six", "seven", "nine", "ten"]

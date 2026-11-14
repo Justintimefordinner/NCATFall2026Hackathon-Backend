@@ -315,3 +315,18 @@ def test_power_on_after_finishing_resumes_complete(working):
     working.dispatch(cmd(POWER_OFF, "panel"))
     assert working.dispatch(cmd(POWER, "panel")).message == "MES activated. Operation complete"
     assert working.mode == COMPLETE
+
+
+# ---------- easter egg ----------
+def test_thank_judges_any_mode_no_state_change():
+    from parser import parse
+    m = MES(config.DATA_PATH)
+    m.listening = True                           # voice still needs Listen on
+    for _ in range(2):                           # idle, then after power on
+        before = m.snapshot()
+        r = m.dispatch(parse("what do you say to our judges", source="voice"))
+        assert r.ok and r.speak and r.message == "Thank you for your time and consideration"
+        after = m.snapshot()
+        skip = ("log", "last")                   # the log records the command
+        assert {k: v for k, v in after.items() if k not in skip} == {k: v for k, v in before.items() if k not in skip}
+        m.dispatch(Command(POWER, "panel"))

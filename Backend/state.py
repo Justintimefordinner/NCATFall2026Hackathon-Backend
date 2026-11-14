@@ -12,7 +12,7 @@ import time
 import config
 from models import (
     ALERT, ARRIVED, BLOCKED_BY_ALERT, COMPLETE, IDLE, INSPECTOR_SIGNOFF, LISTEN_TOGGLE,
-    POWER, POWER_OFF, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, UNKNOWN,
+    POWER, POWER_OFF, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, THANK_JUDGES, UNKNOWN,
     INFO, VIEWING, WORKING, Command, LogEntry, Result,
 )
 from parser import normalize
@@ -73,6 +73,9 @@ class MES:
         # 2. unknown or low confidence
         if cmd.intent == UNKNOWN or cmd.confidence < config.CONFIDENCE_THRESHOLD:
             return Result(False, "Try again")
+        # 2b. easter egg: works in any mode, changes nothing
+        if cmd.intent == THANK_JUDGES:
+            return Result(True, "Thank you for your time and consideration")
         # 3. idle (standby) only accepts power, power off, reset; listen is ignored
         if self.mode == IDLE and cmd.intent not in (POWER, POWER_OFF, RESET):
             return Result(False, "Press power to start", speak=False)
