@@ -1,0 +1,6 @@
+sherpa-onnx>=1.10.30
+sounddevice
+numpy
+scipy
+requests
+websocket-client>=1.6

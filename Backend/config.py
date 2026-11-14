@@ -10,8 +10,7 @@ DATA_PATH = os.environ.get(
 IMG_DIR = os.path.join(BASE_DIR, "data", "img")
 FRONTEND_DIST = os.environ.get(
     "MES_FRONTEND_DIST",
-    os.path.join(BASE_DIR, "..", "Frontend", "dist")
-)
+    os.path.join(BASE_DIR, "..", "Frontend", "dist"))
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("MES_PORT", "5000"))
 
