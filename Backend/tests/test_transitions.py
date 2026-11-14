@@ -294,7 +294,7 @@ def test_power_off_goes_to_standby_and_keeps_progress(working):
     # while off, the tech can't do anything but power on
     assert working.dispatch(cmd(START_LABOR)).message == "Press power to start"
     r = working.dispatch(cmd(POWER, "panel"))
-    assert r.message == "Incomplete operation. Start labor or open instructions?"
+    assert r.message == "MES activated. Incomplete operation. Start labor or open instructions?"
     assert working.mode == ARRIVED and (1, 1) in working.signed
 
 
@@ -313,5 +313,5 @@ def test_power_off_closes_supervisor_challenge(working):
 def test_power_on_after_finishing_resumes_complete(working):
     _finish(working)
     working.dispatch(cmd(POWER_OFF, "panel"))
-    assert working.dispatch(cmd(POWER, "panel")).message == "Operation complete"
+    assert working.dispatch(cmd(POWER, "panel")).message == "MES activated. Operation complete"
     assert working.mode == COMPLETE

@@ -27,6 +27,7 @@ import heapq
 import io
 import itertools
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -180,12 +181,24 @@ def earcon(sr):
     return tone([1320], sr, 0.07, 0.35)
 
 
+# ---------------- pronunciation ----------------
+# Screen text stays as-is; only what the engine reads is rewritten.
+SAY_AS = [(re.compile(r"\bMES\b"), "M E S")]      # letters, not "mess"
+
+
+def spoken(text):
+    for pat, rep in SAY_AS:
+        text = pat.sub(rep, text)
+    return text
+
+
 # ---------------- phrases worth pre-rendering ----------------
 # Copied from Backend/state.py (the voice process never imports backend code).
 # A phrase missing here still works: it's synthesized live once, then cached.
-GREETING = "M E S activated"     # spelled out so Piper says the letters, not "mess"
+GREETING = "MES activated"
 FIXED = [
-    GREETING,
+    GREETING, "MES activated. Operation complete",
+    "MES activated. Incomplete operation. Start labor or open instructions?",
     "Try again", "Operation complete", "Incomplete operation. Start labor or open instructions?",
     "Station off", "Listening on", "Listening off", "Labor started", "Labor already running",
     "Labor is not running", "Labor stopped. Operation complete", "Labor stopped. Operation incomplete",
@@ -357,8 +370,25 @@ class Speaker:
             if self.current is not None and priority <= self.current and priority != INFO \
                     and not (priority == ALERT and self.current == ALERT):
                 self.cut.set()                # alert beats anything; confirmation replaces confirmation/info
-            heapq.heappush(self.pending, (priority, next(self.seq), "say", text))
+            heapq.heappush(self.pending, (priority, next(self.seq), "say", spoken(text)))
             self.cv.notify()
+
+    def match_rate(self, rate):
+        """Mic and speaker on one USB card: many cards can't capture and play at
+        different rates at once, so play at the mic's rate if the card allows it."""
+        if not isinstance(self.out, SoundDeviceOut) or rate == self.out.sr:
+            return
+        try:
+            self.out.sd.check_output_settings(device=self.out.device, channels=1,
+                                              samplerate=rate, dtype="float32")
+        except Exception as e:
+            print(f"!! TTS: speaker can't play at the mic's {rate} Hz ({e}); "
+                  f"if you hear nothing, use a different --out-device")
+            return
+        self.out.close()
+        self.out.sr = rate
+        self.mem.clear()
+        print(f"TTS: output now {rate} Hz to match the mic (same USB device)")
 
     def earcon(self):
         """Short beep: "I heard you" before STT finishes. Never interrupts speech."""
@@ -372,7 +402,7 @@ class Speaker:
     def prerender(self, phrases=None):
         if self.engine is None:
             return
-        phrases = default_phrases() if phrases is None else phrases
+        phrases = [spoken(p) for p in (default_phrases() if phrases is None else phrases)]
         todo = [p for p in phrases if not os.path.exists(self._path(p))]
         if not todo:
             print(f"TTS: all {len(phrases)} common phrases cached")

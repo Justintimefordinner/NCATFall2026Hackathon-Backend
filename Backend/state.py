@@ -90,9 +90,9 @@ class MES:
             return Result(True, "Already on", speak=False)
         if len(self.signed) == self.total_steps:      # was finished before going to standby
             self.mode = COMPLETE
-            return Result(True, "Operation complete")
+            return Result(True, "MES activated. Operation complete")
         self.mode = ARRIVED
-        return Result(True, "Incomplete operation. Start labor or open instructions?",
+        return Result(True, "MES activated. Incomplete operation. Start labor or open instructions?",
                       priority=INFO)
 
     def _on_power_off(self, cmd):

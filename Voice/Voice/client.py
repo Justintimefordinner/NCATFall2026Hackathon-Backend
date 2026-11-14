@@ -212,6 +212,8 @@ class VoiceClient:
         self.tts.start(prerender=not self.a.no_prerender)
         self.start_ws()
         self.mic = Mic(self.a.device).start()
+        if self.a.out_device == self.a.device:
+            self.tts.match_rate(self.mic.rate)
         self.calibrate()
         print(f"Ready. Backend: {self.http}  listening={self.listening}  Ctrl+C to quit.\n")
         if self.a.greeting:
