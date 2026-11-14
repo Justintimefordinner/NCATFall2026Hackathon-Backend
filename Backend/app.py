@@ -128,6 +128,24 @@ def http_panel_lights():
     return jsonify(mes.lights())
 
 
+def _git_version():
+    try:
+        import subprocess
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=config.BASE_DIR,
+                              capture_output=True, text=True, timeout=2).stdout.strip() or None
+    except Exception:
+        return None
+
+
+VERSION = _git_version()
+
+
+@app.get("/api/panel/status")
+def http_panel_status():
+    """Is the heartbeat alive and is a panel connected? For debugging on the Pi."""
+    return jsonify(version=VERSION, lights=mes.lights(), **hub.status())
+
+
 # ---------- WebSockets ----------
 @sock.route("/ws/ui")
 def ws_ui(ws):

@@ -8,8 +8,10 @@ Lock order is always Hub.lock -> MES.lock (snapshot()/lights() take it briefly);
 MES.dispatch never touches the hub, so this can't deadlock.
 """
 import json
+import os
 import threading
 import time
+import traceback
 
 
 class Hub:
@@ -17,6 +19,10 @@ class Hub:
         self.mes, self.ui, self.panels = mes, set(), set()
         self.lock = threading.Lock()     # serializes sends and set changes
         self._beating = False
+        self._thread = None
+        self.beats = 0                   # heartbeats sent to at least one panel
+        self.last_beat = None            # time.time() of the last heartbeat tick
+        self.dropped = 0                 # panel sockets dropped after a failed send
 
     # ---------- messages ----------
     def state_msg(self):
@@ -63,16 +69,35 @@ class Hub:
     def beat(self):
         """One heartbeat: resend current lights to every panel."""
         with self.lock:
+            self.last_beat = time.time()
             if not self.panels:
                 return
             lights = self.lights_msg()
             for ws in list(self.panels):
                 self._try_send(self.panels, ws, [lights])
+            self.beats += 1
 
     def heartbeat(self, interval=1.0):
+        print(f"[panel] heartbeat running every {interval:g} s (pid {os.getpid()})", flush=True)
         while True:
             time.sleep(interval)
-            self.beat()
+            try:
+                self.beat()
+            except Exception:            # never let one bad tick kill the heartbeat
+                traceback.print_exc()
+
+    def status(self):
+        with self.lock:
+            return {
+                "pid": os.getpid(),
+                "panels_connected": len(self.panels),
+                "screens_connected": len(self.ui),
+                "heartbeat_running": bool(self._thread and self._thread.is_alive()),
+                "heartbeats_sent": self.beats,
+                "seconds_since_heartbeat": (None if self.last_beat is None
+                                            else round(time.time() - self.last_beat, 1)),
+                "panels_dropped": self.dropped,
+            }
 
     def start_heartbeat(self, interval=1.0):
         """Start the heartbeat thread once, however the app was launched.
@@ -81,13 +106,16 @@ class Hub:
             if self._beating:
                 return
             self._beating = True
-        threading.Thread(target=self.heartbeat, args=(interval,), daemon=True,
-                         name="panel-heartbeat").start()
+        self._thread = threading.Thread(target=self.heartbeat, args=(interval,), daemon=True,
+                                        name="panel-heartbeat")
+        self._thread.start()
 
-    @staticmethod
-    def _try_send(group, ws, msgs):
+    def _try_send(self, group, ws, msgs):
         try:
             for m in msgs:
                 ws.send(m)
-        except Exception:
+        except Exception as e:
             group.discard(ws)      # dead socket, drop it
+            if group is self.panels:
+                self.dropped += 1
+                print(f"[panel] dropped after failed send: {e!r}", flush=True)

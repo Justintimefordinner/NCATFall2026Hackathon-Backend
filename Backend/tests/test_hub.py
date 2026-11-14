@@ -68,3 +68,40 @@ def test_heartbeat_started_on_import():
     from app import hub
     assert hub._beating is True
     hub.start_heartbeat()                           # second call is a no-op
+
+
+def test_heartbeat_survives_an_exception(monkeypatch):
+    import threading, time as t
+    m, h, log = setup()
+    calls = {"n": 0}
+    real = h.mes.lights
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("boom")
+        return real()
+    monkeypatch.setattr(h.mes, "lights", flaky)
+    h.start_heartbeat(interval=0.02)
+    t.sleep(0.2)
+    assert h.status()["heartbeat_running"] is True and h.beats >= 2
+
+
+def test_dropped_panel_is_counted():
+    m, h, log = setup()
+
+    class Dead:
+        def send(self, m):
+            raise OSError("gone")
+    h.panels.add(Dead())
+    h.beat()
+    s = h.status()
+    assert s["panels_dropped"] == 1 and s["panels_connected"] == 1
+
+
+def test_status_route():
+    from app import app
+    s = app.test_client().get("/api/panel/status").get_json()
+    assert s["heartbeat_running"] is True
+    assert {"version", "lights", "panels_connected", "heartbeats_sent",
+            "seconds_since_heartbeat", "panels_dropped"} <= set(s)
