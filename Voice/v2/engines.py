@@ -128,6 +128,29 @@ def cosine(a, b):
     return float(np.dot(a, b) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-9))
 
 
+def load_room(cfg):
+    """'Room center': the average voiceprint of this mic + room, from other people's
+    samples plus the supervisor's. Subtracting it removes what every voice recorded
+    here has in common (mic, room), so only the voice itself is compared.
+    Returns (center, n_room_samples) or (None, 0)."""
+    room_p = os.path.join(cfg.VOICES_DIR, "room_samples.npy")
+    if not os.path.exists(room_p):
+        return None, 0
+    room = np.load(room_p)
+    sup_p = os.path.join(cfg.VOICES_DIR, "supervisor_samples.npy")
+    sup_one = os.path.join(cfg.VOICES_DIR, "supervisor.npy")
+    sup = np.load(sup_p) if os.path.exists(sup_p) else (np.load(sup_one)[None] if os.path.exists(sup_one) else None)
+    allv = room if sup is None else np.concatenate([room, sup])
+    return allv.mean(axis=0), len(room)
+
+
+def speaker_score(emb, supervisor, center=None):
+    """Cosine vs the supervisor, room-adjusted when a center is available."""
+    if center is None:
+        return cosine(emb, supervisor)
+    return cosine(emb - center, supervisor - center)
+
+
 # ---------------- TTS ----------------
 class TTS:
     """Piper through sherpa-onnx if it actually produces audio, else espeak-ng, else silent."""

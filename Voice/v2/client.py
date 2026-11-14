@@ -64,18 +64,22 @@ class VoiceClient:
         print(f"  stt: {asr_name}")
 
         sup, info = (None, None)
-        speaker = None
+        speaker = center = None
         if cfg.USE_SPEAKER_ID:
             sup, info = E.load_supervisor(cfg)
             if sup is not None:
                 speaker = E.load_speaker(cfg)
                 print(f"  speaker: supervisor '{info.get('name', '?')}' enrolled "
                       f"({info.get('samples', '?')} samples, consistency {info.get('consistency', '?')})")
+                if cfg.USE_ROOM_ADJUST:
+                    center, n = E.load_room(cfg)
+                    print(f"  speaker: room-adjusted scores ({n} room samples)" if center is not None
+                          else "  speaker: no room samples -> raw scores (enroll.py --room)")
             else:
                 print("  speaker: no supervisor enrolled -> speaker_score 0.0 "
                       "(supervisor voice confirm will fail; PIN still works). Run enroll.py")
         self.has_supervisor = sup is not None
-        self.pipe = Pipeline(cfg, self.asr, speaker, sup)
+        self.pipe = Pipeline(cfg, self.asr, speaker, sup, center)
 
         self.tts = E.TTS(cfg)
         print(f"  tts: {self.tts.engine}")

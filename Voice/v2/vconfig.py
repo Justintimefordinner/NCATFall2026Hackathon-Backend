@@ -25,6 +25,7 @@ USE_HIGHPASS = True            # 120 Hz high-pass (machine rumble, mains hum)
 USE_VAD = True                 # Silero VAD: STT only ever sees speech
 USE_GATE = True                # loudness gate: drops far-away talkers
 USE_SPEAKER_ID = True          # scores the voice vs the enrolled SUPERVISOR. Never blocks tech commands.
+USE_ROOM_ADJUST = True         # subtract the room/mic "center" (enroll.py --room) before scoring
 USE_TTS = True                 # speak backend announcements
 USE_ECHO_FILTER = True         # drop transcripts that repeat what the bench just said
 

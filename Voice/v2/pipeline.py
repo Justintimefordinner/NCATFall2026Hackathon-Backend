@@ -47,15 +47,16 @@ class Result:
 
 
 class Pipeline:
-    def __init__(self, cfg, asr, speaker=None, supervisor=None):
+    def __init__(self, cfg, asr, speaker=None, supervisor=None, center=None):
         self.cfg = cfg
         self.asr = asr
         self.speaker = speaker
         self.supervisor = supervisor
+        self.center = center
         self.pool = ThreadPoolExecutor(max_workers=1)
 
     def _score(self, seg):
-        return E.cosine(E.embed(self.speaker, seg), self.supervisor)
+        return E.speaker_score(E.embed(self.speaker, seg), self.supervisor, self.center)
 
     def process(self, seg, floor):
         c = self.cfg

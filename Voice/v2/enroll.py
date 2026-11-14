@@ -63,9 +63,9 @@ def countdown():
     print("TALK")
 
 
-def record_sample(cfg, mic, ext, seconds, prompt, i, total):
+def record_sample(cfg, mic, ext, seconds, prompt, i, total, who="the supervisor"):
     while True:
-        print(f"\nSample {i}/{total}. When it says TALK, read this out loud at normal volume,")
+        print(f"\nSample {i}/{total}. When it says TALK, {who} reads this out loud at normal volume,")
         print(f"from where the supervisor will stand during the demo:\n\n   \"{prompt}\"\n")
         input("  Press Enter when ready... ")
         countdown()
@@ -137,15 +137,52 @@ def enroll(cfg, a):
     print("Add more later with --add. On the Pi, restart voice: sudo systemctl restart mes-voice")
 
 
+# Long enough (3+ s) to pass the 1.5 s speech minimum and give a solid voiceprint.
+ROOM_PROMPTS = [
+    "Supervisor confirm. Blue seven, green four, red nine.",
+    "Clear quality alert. The quick brown fox jumps over the lazy dog.",
+    "Inspector sign off on step three. One, two, three, four, five, six.",
+    "Step two done, next page, start labor, stop labor, page complete.",
+    "Acknowledge alert. Orange two, silver five, purple eight.",
+    "I am working at station one, and I am checking the bricks on page two.",
+]
+
+
+def room(cfg, a):
+    """Record OTHER people (not the supervisor) so the room/mic part can be subtracted."""
+    room_p = os.path.join(cfg.VOICES_DIR, "room_samples.npy")
+    old = list(np.load(room_p)) if (a.add and os.path.exists(room_p)) else []
+    if old:
+        print(f"Adding to {len(old)} room samples already saved.")
+    ext = E.load_speaker(cfg)
+    mic = Mic(a.device if a.device is not None else cfg.MIC_DEVICE)
+    print(f"Mic: {mic.name}")
+    print("Room samples: people who are NOT the supervisor, same mic, same spot, same room.")
+    print("Best: 2-3 different people, 2-3 samples each (use --add between people).\n")
+    new = []
+    for i in range(a.samples):
+        prompt = ROOM_PROMPTS[(len(old) + i) % len(ROOM_PROMPTS)]
+        new.append(record_sample(cfg, mic, ext, a.seconds, prompt, i + 1, a.samples, who="someone who is NOT the supervisor"))
+    mic.close()
+    os.makedirs(cfg.VOICES_DIR, exist_ok=True)
+    np.save(room_p, np.stack(old + new))
+    print(f"\nSaved {len(old) + len(new)} room samples. Now re-run: python enroll.py --test")
+
+
 def test(cfg, a):
     sup, info = E.load_supervisor(cfg)
     if sup is None:
         sys.exit("No supervisor enrolled. Run: python enroll.py --name <name>")
+    center, n_room = E.load_room(cfg) if cfg.USE_ROOM_ADJUST else (None, 0)
     ext = E.load_speaker(cfg)
     vad, window = E.load_vad(cfg)
     mic = Mic(a.device if a.device is not None else cfg.MIC_DEVICE)
     hp = HighPass(fc=cfg.HIGHPASS_HZ)
     print(f"Supervisor: {info.get('name')}. Mic: {mic.name}")
+    if center is not None:
+        print(f"Room-adjusted ({n_room} room samples). Columns: ADJUSTED (what the backend gets) and raw.")
+    else:
+        print("No room samples: raw scores only (python enroll.py --room to add them).")
     print("Have the supervisor AND other people say a few commands. Each line is one utterance.")
     print("Pick the backend threshold between the supervisor's LOWEST score and everyone else's HIGHEST.")
     print("Doc: set it strict (wrong person let through is worse than asking again). Ctrl+C to stop.\n")
@@ -164,9 +201,12 @@ def test(cfg, a):
                 vad.pop()
                 if len(seg) / SR < 0.5:
                     continue
-                s = E.cosine(E.embed(ext, seg), sup)
+                e = E.embed(ext, seg)
+                raw = E.cosine(e, sup)
+                s = E.speaker_score(e, sup, center)
                 bar = "#" * max(0, int(s * 40))
-                print(f"  {s:5.3f} |{bar:<40}| {len(seg)/SR:.1f}s")
+                extra = f"   raw {raw:5.3f}" if center is not None else ""
+                print(f"  {s:6.3f} |{bar:<40}| {len(seg)/SR:.1f}s{extra}")
     except KeyboardInterrupt:
         print()
 
@@ -180,6 +220,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=5.0)
     ap.add_argument("--device", help="mic name piece or index")
     ap.add_argument("--test", action="store_true", help="live score vs the enrolled supervisor")
+    ap.add_argument("--room", action="store_true",
+                    help="record OTHER people to cancel out the room/mic (use --add between people)")
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--delete", action="store_true")
     ap.add_argument("--devices", action="store_true")
@@ -201,6 +243,10 @@ def main():
         return
     if a.test:
         return test(cfg, a)
+    if a.room:
+        if a.samples == 4 and "--samples" not in sys.argv:
+            a.samples = 3
+        return room(cfg, a)
     enroll(cfg, a)
 
 

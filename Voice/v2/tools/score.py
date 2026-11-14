@@ -88,11 +88,13 @@ class Matcher:
 def run(cfg, rows, matcher, label=""):
     asr, asr_name = E.load_asr(cfg)
     vad, window = E.load_vad(cfg) if cfg.USE_VAD else (None, 512)
-    speaker = sup = None
+    speaker = sup = center = None
     if cfg.USE_SPEAKER_ID:
         sup, _ = E.load_supervisor(cfg)
         speaker = E.load_speaker(cfg) if sup is not None else None
-    pipe = Pipeline(cfg, asr, speaker, sup)
+        if sup is not None and cfg.USE_ROOM_ADJUST:
+            center, _ = E.load_room(cfg)
+    pipe = Pipeline(cfg, asr, speaker, sup, center)
 
     results = []
     for i, row in enumerate(rows, 1):
