@@ -22,7 +22,7 @@ wscat -c ws://localhost:5000/ws/ui              # watch state / announce pushes
 
 ## Settings (env vars, see `config.py`)
 
-`MES_PIN` (default `1234`), `MES_CONFIDENCE` (`0.6`), `MES_PORT` (`5000`), `MES_DATA`, `MES_FRONTEND_DIST` (default `../NCATFall2026Hackathon-Frontend/dist`).
+`MES_PIN` (default `1234`), `MES_CONFIDENCE` (`0.6`), `MES_PORT` (`5000`), `MES_DATA`, `MES_FRONTEND_DIST` (default `../Frontend/dist`).
 
 ## Contract notes for clients
 
