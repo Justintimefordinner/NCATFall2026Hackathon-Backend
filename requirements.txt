@@ -1,0 +1,4 @@
+flask>=3.1
+flask-sock>=0.7
+pytest>=8
+websockets>=13

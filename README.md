@@ -1,0 +1,34 @@
+# Voice MES Backend
+
+Flask + WebSocket backend that owns all MES state. Design: `Flask API and State Machine Programming Plan.md`.
+
+## Setup
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/pytest -q            # parser, transitions, walkthrough, HTTP API
+.venv/bin/python app.py        # serves on 0.0.0.0:5000
+```
+
+## Driving it without the other parts
+
+```bash
+.venv/bin/python tools/repl.py                  # type "start labor", "step one done", ":power", ":alert loose brick", ":ack 1234"
+.venv/bin/python tools/fake_panel.py            # p = power, l = listen; prints lights
+wscat -c ws://localhost:5000/ws/ui              # watch state / announce pushes
+.venv/bin/python tools/make_fixtures.py         # regenerate fixtures/state_*.json for the frontend
+```
+
+## Settings (env vars, see `config.py`)
+
+`MES_PIN` (default `1234`), `MES_CONFIDENCE` (`0.6`), `MES_PORT` (`5000`), `MES_DATA`, `MES_FRONTEND_DIST` (default `../NCATFall2026Hackathon-Frontend/dist`).
+
+## Contract notes for clients
+
+- Every POST returns `{"ok", "message", "state"}` with HTTP 200, even when `ok` is false. 400 only for malformed JSON.
+- `/ws/ui` pushes `{"type": "state", ...snapshot}` on connect and after every change, plus `{"type": "announce", "message"}` when the result should be spoken.
+- `/ws/panel` pushes `{"type": "lights", "power", "listening", "labor", "alert", "complete"}` on connect, on change, and every 1 s.
+- `state.page.all_signed` is true when every step on the current page is signed (use it for the "page complete" banner; "page done" does not auto-advance).
+- `state.log` is the newest 50 entries, oldest first.
+- Step images are served from `data/img/` at `/static/img/<file>`.

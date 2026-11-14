@@ -1,0 +1,59 @@
+{
+  "type": "state",
+  "operation": {
+    "work_order": "WO-1001",
+    "part_rev": "B",
+    "serial": "SN-0042",
+    "operation": "Op 10: Base assembly",
+    "operator": "J. Wright",
+    "page_count": 2
+  },
+  "mode": "idle",
+  "listening": false,
+  "labor": {
+    "running": false,
+    "seconds": 0
+  },
+  "page": {
+    "number": 1,
+    "title": "Base plate",
+    "steps": [
+      {
+        "number": 1,
+        "text": "Place 2x8 grey plate",
+        "image": "/static/img/p1s1.jpg",
+        "inspector_required": false,
+        "signed": false,
+        "signed_by": null,
+        "pending_inspector": false
+      },
+      {
+        "number": 2,
+        "text": "Attach 2x2 red brick at corner",
+        "image": "/static/img/p1s2.jpg",
+        "inspector_required": true,
+        "signed": false,
+        "signed_by": null,
+        "pending_inspector": false
+      },
+      {
+        "number": 3,
+        "text": "Attach 2x2 red brick at opposite corner",
+        "image": "/static/img/p1s3.jpg",
+        "inspector_required": false,
+        "signed": false,
+        "signed_by": null,
+        "pending_inspector": false
+      }
+    ],
+    "all_signed": false
+  },
+  "pending_inspector": [],
+  "progress": {
+    "signed": 0,
+    "total": 6
+  },
+  "quality_alert": null,
+  "last": null,
+  "log": []
+}

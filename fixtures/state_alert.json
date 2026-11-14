@@ -1,0 +1,120 @@
+{
+  "type": "state",
+  "operation": {
+    "work_order": "WO-1001",
+    "part_rev": "B",
+    "serial": "SN-0042",
+    "operation": "Op 10: Base assembly",
+    "operator": "J. Wright",
+    "page_count": 2
+  },
+  "mode": "working",
+  "listening": true,
+  "labor": {
+    "running": true,
+    "seconds": 312
+  },
+  "page": {
+    "number": 1,
+    "title": "Base plate",
+    "steps": [
+      {
+        "number": 1,
+        "text": "Place 2x8 grey plate",
+        "image": "/static/img/p1s1.jpg",
+        "inspector_required": false,
+        "signed": true,
+        "signed_by": "tech",
+        "pending_inspector": false
+      },
+      {
+        "number": 2,
+        "text": "Attach 2x2 red brick at corner",
+        "image": "/static/img/p1s2.jpg",
+        "inspector_required": true,
+        "signed": false,
+        "signed_by": null,
+        "pending_inspector": true
+      },
+      {
+        "number": 3,
+        "text": "Attach 2x2 red brick at opposite corner",
+        "image": "/static/img/p1s3.jpg",
+        "inspector_required": false,
+        "signed": false,
+        "signed_by": null,
+        "pending_inspector": false
+      }
+    ],
+    "all_signed": false
+  },
+  "pending_inspector": [
+    {
+      "page": 1,
+      "step": 2
+    }
+  ],
+  "progress": {
+    "signed": 1,
+    "total": 6
+  },
+  "quality_alert": "Bolt 6 not torqued to spec",
+  "last": {
+    "ts": 1794633407.837561,
+    "source": "voice",
+    "input": "next page",
+    "ok": false,
+    "message": "Quality alert open. Supervisor must clear it"
+  },
+  "log": [
+    {
+      "ts": 1794633407.8373477,
+      "source": "panel",
+      "input": "power",
+      "ok": true,
+      "message": "Incomplete operation. Start labor or open instructions?"
+    },
+    {
+      "ts": 1794633407.8373573,
+      "source": "panel",
+      "input": "listen_toggle",
+      "ok": true,
+      "message": "Listening on"
+    },
+    {
+      "ts": 1794633407.8373625,
+      "source": "voice",
+      "input": "start labor",
+      "ok": true,
+      "message": "Labor started"
+    },
+    {
+      "ts": 1794633407.83737,
+      "source": "voice",
+      "input": "step one done",
+      "ok": true,
+      "message": "Step 1 signed off"
+    },
+    {
+      "ts": 1794633407.8373744,
+      "source": "voice",
+      "input": "step two done",
+      "ok": false,
+      "message": "This step requires supervisor sign-off"
+    },
+    {
+      "ts": 1794633407.837558,
+      "source": "supervisor",
+      "input": "quality alert: Bolt 6 not torqued to spec",
+      "ok": true,
+      "message": "Quality alert: Bolt 6 not torqued to spec"
+    },
+    {
+      "ts": 1794633407.837561,
+      "source": "voice",
+      "input": "next page",
+      "ok": false,
+      "message": "Quality alert open. Supervisor must clear it"
+    }
+  ]
+}
