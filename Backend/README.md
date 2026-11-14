@@ -28,7 +28,7 @@ wscat -c ws://localhost:5000/ws/ui              # watch state / announce pushes
 
 - Every POST returns `{"ok", "message", "state"}` with HTTP 200, even when `ok` is false. 400 only for malformed JSON.
 - `/ws/ui` pushes `{"type": "state", ...snapshot}` on connect and after every change, plus `{"type": "announce", "message"}` when the result should be spoken.
-- `/ws/panel` pushes `{"type": "lights", "power", "listening", "labor", "alert", "inspector", "complete"}` on connect, on change, and every 1 s. `inspector` is true while any step waits on supervisor sign-off.
+- `/ws/panel` pushes `{"type": "lights", "power", "listening", "labor", "alert", "inspector", "complete"}` on connect, on hello, and after every command. No periodic heartbeat: the panel should treat the WebSocket connection itself as "Pi alive". `GET /api/panel/status` shows the running code version and how many panels are connected. `inspector` is true while any step waits on supervisor sign-off.
 - Panel button ids: `power` (short press: standby -> on), `power_off` (long press: back to standby, mode `idle`; progress, alerts and the labor total are kept, the clock and listening stop), `listen_toggle` (ignored in standby).
 - `state.page.all_signed` is true when every step on the current page is signed (use it for the "page complete" banner; "page done" does not auto-advance).
 - `state.log` is the newest 50 entries, oldest first.

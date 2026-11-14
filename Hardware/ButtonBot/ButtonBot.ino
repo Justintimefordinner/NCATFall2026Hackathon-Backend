@@ -32,9 +32,13 @@ const unsigned long LONG_PRESS_MS = 1500;   // hold power this long to turn the 
 
 // ---- Light state (from the Pi) ----
 bool listening = false, labor = false, inspector = false, alertOpen = false;
-unsigned long lastRx = 0;
+unsigned long lastRx = 0;                       // last lights message (any transport)
 unsigned long listenHoldUntil = 0;              // blue trusts the button until this time
-const unsigned long HEARTBEAT_TIMEOUT = 3000;   // ms
+// The Pi sends lights only when something happens (no heartbeat), so "Pi alive"
+// comes from the WebSocket connection itself. HTTP fallback polls every 500 ms,
+// so there a gap this long still means the Pi is gone.
+bool wsUp = false;                              // WebSocket currently connected
+const unsigned long POLL_TIMEOUT = 3000;        // ms, HTTP fallback only
 
 // ---- Power button hold tracking ----
 bool powerHeld = false;
@@ -154,7 +158,11 @@ void checkPowerHold() {
 
 void updateLights() {
   unsigned long now = millis();
-  bool piAlive = (lastRx != 0) && (now - lastRx < HEARTBEAT_TIMEOUT);
+#if USE_WEBSOCKET
+  bool piAlive = wsUp && lastRx != 0;   // connected and got at least one lights message
+#else
+  bool piAlive = (lastRx != 0) && (now - lastRx < POLL_TIMEOUT);
+#endif
 
   if (!piAlive) {                       // lost the Pi: all lights off
     digitalWrite(PIN_LISTEN_LED, LOW);
@@ -184,12 +192,15 @@ void onWsEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
     case WStype_CONNECTED: {
       Serial.println("WebSocket connected");
+      wsUp = true;
       String hello = String("{\"type\":\"hello\",\"panel\":\"") + PANEL_ID + "\"}";
       ws.sendTXT(hello);
       break;
     }
     case WStype_DISCONNECTED: {
       Serial.println("WebSocket disconnected");
+      wsUp = false;
+      lastRx = 0;                       // wait for fresh lights after reconnecting
       break;
     }
     case WStype_TEXT: {

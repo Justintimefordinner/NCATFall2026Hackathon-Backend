@@ -2,7 +2,7 @@
 
   python tools/fake_panel.py [--url ws://localhost:5000/ws/panel]
 Type p + Enter for power, l + Enter for listen. Prints every lights message
-(heartbeats only when they change, unless --verbose).
+that differs from the last one (all of them with --verbose).
 """
 import argparse
 import asyncio

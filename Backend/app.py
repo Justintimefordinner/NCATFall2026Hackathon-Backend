@@ -21,7 +21,6 @@ app = Flask(__name__, static_folder=None)
 sock = Sock(app)
 mes = MES(config.DATA_PATH)
 hub = Hub(mes)
-hub.start_heartbeat()      # here, not in main(), so it runs under `flask run` / services too
 
 
 # ---------- helpers ----------
@@ -142,7 +141,7 @@ VERSION = _git_version()
 
 @app.get("/api/panel/status")
 def http_panel_status():
-    """Is the heartbeat alive and is a panel connected? For debugging on the Pi."""
+    """Is a panel connected, and which code is running? For debugging on the Pi."""
     return jsonify(version=VERSION, lights=mes.lights(), **hub.status())
 
 
