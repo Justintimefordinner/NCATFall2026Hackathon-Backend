@@ -321,12 +321,22 @@ class Speaker:
                                          if isinstance(engine, str) else engine)
         self.out = out
         if self.engine is not None and self.out is None:
+            Out = AplayOut if player == "aplay" else SoundDeviceOut
+            rate = getattr(self.engine, "sample_rate", 22050)
             try:
-                self.out = (AplayOut if player == "aplay" else SoundDeviceOut)(
-                    out_device, getattr(self.engine, "sample_rate", 22050))
+                self.out = Out(out_device, rate)
             except Exception as e:
-                print(f"!! TTS: no audio output ({e}) -> announcements are printed only")
-                self.engine = None
+                # usually the card's playback side is held by PipeWire (e.g. Chromium is open);
+                # the system default goes through PipeWire and still reaches that speaker
+                if out_device is not None:
+                    print(f"!! TTS: output {out_device!r} unavailable ({e}); trying the system default")
+                    try:
+                        self.out = Out(None, rate)
+                    except Exception as e2:
+                        e = e2
+                if self.out is None:
+                    print(f"!! TTS: no audio output ({e}) -> announcements are printed only")
+                    self.engine = None
         self.cache_dir, self.chime = cache_dir, chime
         self.mem = {}                         # cache key -> samples at self.out.sr
         self.synth_lock = threading.Lock()    # engines aren't thread-safe
@@ -376,7 +386,7 @@ class Speaker:
     def match_rate(self, rate):
         """Mic and speaker on one USB card: many cards can't capture and play at
         different rates at once, so play at the mic's rate if the card allows it."""
-        if not isinstance(self.out, SoundDeviceOut) or rate == self.out.sr:
+        if not isinstance(self.out, SoundDeviceOut) or self.out.device is None or rate == self.out.sr:
             return
         try:
             self.out.sd.check_output_settings(device=self.out.device, channels=1,
