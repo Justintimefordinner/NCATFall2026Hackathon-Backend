@@ -58,17 +58,17 @@ function InstructionViewer({ page, selectedStep }) {
       backgroundColor: "#FFFFFF",
       border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
-      padding: isKiosk ? "10px" : "24px",
+      padding: "clamp(6px, 1.2vh, 16px)",
       display: "flex",
       flexDirection: "column",
-      gap: isKiosk ? "8px" : "24px",
+      gap: "clamp(4px, 1vh, 12px)",
       overflow: "hidden",
       boxSizing: "border-box",
     },
 
     // Instruction page title
     title: {
-      fontSize: isKiosk ? "16px" : "25px",
+      fontSize: "clamp(13px, 2.5vh, 23px)",
       fontWeight: "bold",
       color: "#18181B",
       margin: 0,
@@ -80,7 +80,7 @@ function InstructionViewer({ page, selectedStep }) {
     content: {
       display: "flex",
       flexDirection: "row",
-      gap: isKiosk ? "10px" : "24px",
+      gap: "clamp(6px, 1vw, 16px)",
       flex: 1,
       minHeight: 0,
       minWidth: 0,
@@ -104,7 +104,7 @@ function InstructionViewer({ page, selectedStep }) {
     image: {
       width: "100%",
       height: "100%",
-      maxHeight: isKiosk ? "100%" : "480px",
+      maxHeight: "100%",
       objectFit: "contain",
       display: "block",
     },
@@ -124,8 +124,8 @@ function InstructionViewer({ page, selectedStep }) {
       minHeight: 0,
       display: "flex",
       flexDirection: "column",
-      gap: isKiosk ? "6px" : "20px",
-      overflowY: isKiosk ? "auto" : "visible",
+      gap: "clamp(4px, 0.8vh, 12px)",
+      overflowY: "auto",
       scrollbarWidth: "thin",
     },
 
@@ -135,7 +135,7 @@ function InstructionViewer({ page, selectedStep }) {
       alignItems: "center",
       gap: isKiosk ? "5px" : "10px",
       color: "#2563EB",
-      fontSize: isKiosk ? "13px" : "21px",
+      fontSize: "clamp(12px, 2vh, 19px)",
       fontWeight: "bold",
       flexShrink: 0,
     },
@@ -143,7 +143,7 @@ function InstructionViewer({ page, selectedStep }) {
     // Instruction text
     instructionText: {
       color: "#18181B",
-      fontSize: isKiosk ? "12px" : "18px",
+      fontSize: "clamp(11px, 1.9vh, 17px)",
       lineHeight: isKiosk ? 1.4 : 1.6,
       margin: 0,
     },
@@ -153,7 +153,7 @@ function InstructionViewer({ page, selectedStep }) {
       display: "flex",
       alignItems: "center",
       gap: "6px",
-      fontSize: isKiosk ? "10px" : "14px",
+      fontSize: "clamp(10px, 1.5vh, 13px)",
       fontWeight: "bold",
       color: isSigned ? "#16A34A" : pendingInspector ? "#EA580C" : "#71717A",
     },
@@ -163,8 +163,8 @@ function InstructionViewer({ page, selectedStep }) {
       backgroundColor: "#FFF7ED",
       border: "1px solid #FDBA74",
       borderRadius: isKiosk ? "6px" : "10px",
-      padding: isKiosk ? "7px" : "18px",
-      marginTop: isKiosk ? "4px" : "auto",
+      padding: "clamp(5px, 0.9vh, 12px)",
+      marginTop: "auto",
       flexShrink: 0,
     },
 
@@ -174,7 +174,7 @@ function InstructionViewer({ page, selectedStep }) {
       alignItems: "center",
       gap: isKiosk ? "5px" : "10px",
       color: "#C2410C",
-      fontSize: isKiosk ? "11px" : "18px",
+      fontSize: "clamp(11px, 1.8vh, 16px)",
       fontWeight: "bold",
       marginBottom: isKiosk ? "4px" : "10px",
     },
@@ -182,7 +182,7 @@ function InstructionViewer({ page, selectedStep }) {
     // Note description
     noteText: {
       color: "#57534E",
-      fontSize: isKiosk ? "10px" : "15px",
+      fontSize: "clamp(10px, 1.5vh, 14px)",
       lineHeight: isKiosk ? 1.3 : 1.5,
       margin: 0,
     },

@@ -41,15 +41,15 @@ function StepsSidebar({
   const styles = {
     // Main sidebar container
     sidebar: {
-      width: isKiosk ? "210px" : "310px",
+      width: "clamp(150px, 26vw, 310px)",
       flexShrink: 0,
       backgroundColor: "#FFFFFF",
       border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "8px" : "12px",
-      padding: isKiosk ? "8px" : "20px",
+      padding: "clamp(5px, 1vh, 14px)",
       display: "flex",
       flexDirection: "column",
-      gap: isKiosk ? "8px" : "20px",
+      gap: "clamp(4px, 0.8vh, 12px)",
       minHeight: 0,
       overflow: "hidden",
       boxSizing: "border-box",
@@ -57,7 +57,7 @@ function StepsSidebar({
 
     // Sidebar title
     title: {
-      fontSize: isKiosk ? "15px" : "24px",
+      fontSize: "clamp(13px, 2.5vh, 22px)",
       fontWeight: "bold",
       color: "#18181B",
       margin: 0,
@@ -75,28 +75,28 @@ function StepsSidebar({
     stepsContainer: {
       display: "flex",
       flexDirection: "column",
-      gap: isKiosk ? "6px" : "12px",
+      gap: "clamp(3px, 0.6vh, 8px)",
       minHeight: 0,
-      overflowY: isKiosk ? "auto" : "visible",
+      overflowY: "auto",
       scrollbarWidth: "thin",
     },
 
     // Individual step button
     step: {
       width: "100%",
-      minHeight: isKiosk ? "40px" : "auto",
+      minHeight: "clamp(32px, 7vh, 50px)",
       flexShrink: 0,
       display: "flex",
       alignItems: "center",
       gap: isKiosk ? "7px" : "12px",
-      padding: isKiosk ? "7px 8px" : "16px 14px",
+      padding: "clamp(4px, 0.8vh, 9px) 7px",
       backgroundColor: "#F9FAFB",
       border: "1px solid #E4E4E7",
       borderRadius: isKiosk ? "6px" : "10px",
       color: "#18181B",
       textAlign: "left",
       cursor: "pointer",
-      fontSize: isKiosk ? "11px" : "15px",
+      fontSize: "clamp(10px, 1.6vh, 14px)",
       transition: "background-color 0.2s ease, border-color 0.2s ease",
       boxSizing: "border-box",
     },
@@ -135,7 +135,7 @@ function StepsSidebar({
     // Small status label
     statusLabel: {
       display: "block",
-      fontSize: isKiosk ? "9px" : "12px",
+      fontSize: "clamp(9px, 1.35vh, 11px)",
       marginTop: "4px",
       fontWeight: "bold",
     },

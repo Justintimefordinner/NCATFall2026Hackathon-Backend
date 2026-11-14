@@ -104,10 +104,7 @@ function App() {
 
   const pendingInspector = mesState?.pending_inspector ?? [];
 
-  // Keep pending approval in Flask; only hide its prompt while
-  // the technician reviews a different step.
-  const pendingApproval = pendingInspector[0] ?? null;
-
+  // Show the prompt only for the selected pending step.
   const selectedPendingApproval =
     pendingInspector.find(
       (item) =>
@@ -117,41 +114,6 @@ function App() {
 
   const supervisorApprovalRequired = Boolean(selectedPendingApproval);
 
-  // Any attempt to continue while approval is pending returns the
-  // technician to the blocked step instead of issuing the action.
-  const returnToPendingApproval = () => {
-    if (!pendingApproval) return false;
-
-    if (Number(pendingApproval.page) === Number(currentPage)) {
-      handleSelectStep(pendingApproval.step);
-    } else {
-      // Pending approval is on another page. Do not issue an
-      // unauthorized navigation; the backend remains authoritative.
-      console.warn("Pending supervisor approval is on another page.");
-    }
-    return true;
-  };
-
-  const handleGuardedPreviousPage = () => {
-    if (returnToPendingApproval()) return;
-    return handlePreviousPage();
-  };
-
-  const handleGuardedNextPage = () => {
-    if (returnToPendingApproval()) return;
-    return handleNextPage();
-  };
-
-  const handleGuardedSignOffStep = (step) => {
-    if (returnToPendingApproval()) return;
-    return handleSignOffStep(step);
-  };
-
-  const handleGuardedSignOffPage = () => {
-    if (returnToPendingApproval()) return;
-    return handleSignOffPage();
-  };
-
   // ========================================
   // STYLING
   // ========================================
@@ -160,14 +122,14 @@ function App() {
     // Main application container
     app: {
       width: "100%",
-      height: isKiosk ? "100dvh" : "auto",
-      minHeight: isKiosk ? 0 : "100dvh",
+      height: "100dvh",
+      minHeight: 0,
       backgroundColor: "#F9FAFB",
       color: "#18181B",
       fontFamily: "ui-sans-serif, system-ui, sans-serif",
       display: "flex",
       flexDirection: "column",
-      overflow: isKiosk ? "hidden" : "visible",
+      overflow: "hidden",
       boxSizing: "border-box",
     },
 
@@ -201,23 +163,23 @@ function App() {
     // Main work instructions area
     mainContent: {
       display: "flex",
-      flexDirection: isMobile ? "column" : "row",
+      flexDirection: "row",
       flex: 1,
       minHeight: 0,
       minWidth: 0,
-      padding: isKiosk ? "6px 8px" : isCompact ? "8px" : "16px 20px",
-      gap: isKiosk ? "8px" : "16px",
-      overflow: isKiosk ? "hidden" : "visible",
+      padding: "clamp(4px, 0.9vh, 12px) clamp(6px, 1vw, 20px)",
+      gap: "clamp(4px, 0.8vh, 12px)",
+      overflow: "hidden",
     },
 
     // Voice control and labor timer row
     controlsRow: {
       display: "flex",
-      flexDirection: isMobile ? "column" : "row",
+      flexDirection: "row",
       alignItems: "stretch",
       flexShrink: 0,
-      gap: isKiosk ? "8px" : "16px",
-      padding: isKiosk ? "0 8px 6px" : isCompact ? "0 8px 8px" : "0 20px 16px",
+      gap: "clamp(4px, 0.8vh, 12px)",
+      padding: "0 clamp(6px, 1vw, 20px) clamp(3px, 0.7vh, 10px)",
     },
 
     // Supervisor dashboard button row
@@ -226,7 +188,7 @@ function App() {
       alignItems: "center",
       justifyContent: "flex-start",
       flexShrink: 0,
-      padding: isKiosk ? "0 8px 5px" : "0 20px 16px",
+      padding: "0 clamp(6px, 1vw, 20px) 4px",
     },
 
     // Supervisor dashboard button
@@ -382,13 +344,13 @@ function App() {
         <div
           style={{
             flexShrink: 0,
-            padding: isKiosk ? "6px 8px" : "12px 20px",
+            padding: "clamp(3px, 0.7vh, 8px) clamp(6px, 1vw, 20px)",
             backgroundColor: "#FEF2F2",
             borderTop: "1px solid #FECACA",
             borderBottom: "1px solid #FECACA",
             display: "flex",
             flexDirection: "column",
-            gap: isKiosk ? "5px" : "10px",
+            gap: "clamp(2px, 0.5vh, 8px)",
           }}
         >
           {/* SUPERVISOR NOTIFICATION */}
@@ -415,7 +377,7 @@ function App() {
             onClick={() => navigate("/supervisor")}
             style={{
               width: "100%",
-              minHeight: isKiosk ? "30px" : "44px",
+              minHeight: "clamp(26px, 5vh, 40px)",
               borderRadius: "7px",
               border: "1px solid #FECACA",
               backgroundColor: "#DC2626",
@@ -438,10 +400,10 @@ function App() {
         currentPage={currentPage}
         totalPages={totalPages}
         selectedStep={selectedStep}
-        onPreviousPage={handleGuardedPreviousPage}
-        onNextPage={handleGuardedNextPage}
-        onSignOffStep={handleGuardedSignOffStep}
-        onSignOffPage={handleGuardedSignOffPage}
+        onPreviousPage={handlePreviousPage}
+        onNextPage={handleNextPage}
+        onSignOffStep={handleSignOffStep}
+        onSignOffPage={handleSignOffPage}
       />
     </div>
   );
