@@ -7,7 +7,7 @@
 # A system service (install_service.sh) can't reach it, so it would play nothing.
 # Settings (mic, speaker, TTS_TAIL...) come from voice_config.json next to this file.
 #
-#   journalctl --user -u mes-voice -f        watch the log
+#   journalctl --user-unit mes-voice -f        watch the log
 #   systemctl --user restart mes-voice       after changing voice_config.json or git pull
 #   systemctl --user stop mes-voice          before running client.py by hand (it holds the mic)
 #   systemctl --user disable --now mes-voice turn auto-start off
@@ -50,4 +50,4 @@ sudo loginctl enable-linger "$ME"
 systemctl --user daemon-reload
 systemctl --user enable --now mes-voice
 echo
-echo "Voice now starts at boot. Watch it:  journalctl --user -u mes-voice -f"
+echo "Voice now starts at boot. Watch it:  journalctl --user-unit mes-voice -f"

@@ -47,7 +47,7 @@ $PY client.py --device fifine           # run, watch the log
 
 ```bash
 bash ~/mes/Voice/v2/install_user_service.sh      # settings from voice_config.json
-journalctl --user -u mes-voice -f
+journalctl --user-unit mes-voice -f
 systemctl --user stop mes-voice                  # before running client.py by hand
 ```
 
