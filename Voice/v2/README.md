@@ -43,7 +43,15 @@ $PY client.py --devices                 # find the mic name
 $PY client.py --device fifine           # run, watch the log
 ```
 
-Make it the boot/service version:
+**Start at boot with a Bluetooth / PipeWire speaker:** use the user service (a system service can't reach PipeWire):
+
+```bash
+bash ~/mes/Voice/v2/install_user_service.sh      # settings from voice_config.json
+journalctl --user -u mes-voice -f
+systemctl --user stop mes-voice                  # before running client.py by hand
+```
+
+Or the system service (USB speaker only):
 
 ```bash
 MIC=fifine bash ~/mes/Voice/v2/install_service.sh
