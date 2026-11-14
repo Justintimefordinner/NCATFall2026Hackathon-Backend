@@ -11,6 +11,15 @@ python3 -m venv .venv
 .venv/bin/python app.py        # serves on 0.0.0.0:5000
 ```
 
+## Running everything (from the repo root)
+
+```bash
+npm start        # Pi / demo: backend on :5000 serves the screens; frontend edits rebuild automatically
+npm run dev      # laptop: Vite dev server on :5173 with hot reload, proxying to :5000
+```
+
+Ctrl+C stops everything. A backend left over from an earlier run is stopped automatically, and backend `.py` or `data/op10.json` edits restart the backend on their own (state resets when it does). Same as `./start.sh` / `./start.sh dev`.
+
 ## Driving it without the other parts
 
 ```bash

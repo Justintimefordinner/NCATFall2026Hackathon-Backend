@@ -199,7 +199,11 @@ def frontend_file(name):
 
 
 def main():
-    app.run(host=config.HOST, port=config.PORT, threaded=True)
+    # MES_RELOAD=1: restart automatically when a .py file or the instruction
+    # data changes (start.sh turns this on). State resets on each reload.
+    reload = os.environ.get("MES_RELOAD") == "1"
+    app.run(host=config.HOST, port=config.PORT, threaded=True,
+            use_reloader=reload, extra_files=[config.DATA_PATH] if reload else None)
 
 
 if __name__ == "__main__":

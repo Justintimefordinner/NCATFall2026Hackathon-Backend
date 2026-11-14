@@ -1,0 +1,9 @@
+{
+  "name": "mes-workstation",
+  "private": true,
+  "description": "Run from the repo root: npm start (Pi/demo) or npm run dev (laptop, hot reload)",
+  "scripts": {
+    "start": "./start.sh",
+    "dev": "./start.sh dev"
+  }
+}
