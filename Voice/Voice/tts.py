@@ -43,6 +43,8 @@ EXTRA_PHRASES = os.path.join(HERE, "extra_phrases.txt")   # optional: one line p
 
 ALERT, CONFIRM, INFO = 1, 2, 3
 ECHO_TAIL = 0.3          # keep the mic muted this long after playback (room echo)
+LEAD_IN = 0.3            # silence before the first clip after idle: Bluetooth speakers
+                         # wake up on audio and would swallow the first syllable
 TARGET_RMS = 0.12        # every clip ends up this loud (before the soft limiter)
 
 SPEAKING = threading.Event()
@@ -299,7 +301,7 @@ class AplayOut:
 # ---------------- the speaker ----------------
 class Speaker:
     def __init__(self, engine="piper", voice=None, speed=1.1, out_device=None, player="sounddevice",
-                 mute=False, cache_dir=CACHE_DIR, chime=True, out=None):
+                 mute=False, cache_dir=CACHE_DIR, chime=True, out=None, lead_in=LEAD_IN):
         self.engine = None if mute else (make_engine(engine, voice, speed)
                                          if isinstance(engine, str) else engine)
         self.out = out
@@ -320,6 +322,8 @@ class Speaker:
         self.cut = threading.Event()
         self.last_said = ("", 0.0)            # (lowercased text, time) for client.py's echo filter
         self.started = False
+        self.lead_in = max(0.0, lead_in)
+        self.fresh = True                     # output was idle: pad the next clip with LEAD_IN
         if self.engine is not None:
             os.makedirs(cache_dir, exist_ok=True)
             print(f"TTS: {self.engine.voice}, output {type(self.out).__name__} @ {self.out.sr} Hz")
@@ -433,12 +437,16 @@ class Speaker:
             self.cut.clear()
             return item
 
+    def close_out(self):
+        self.fresh = True
+        self.out.close()
+
     def _player(self):
         while True:
             item = self._next()
             if item is None:
                 try:
-                    self.out.close()
+                    self.close_out()
                 except Exception as e:
                     print(f"  (tts output close error: {e})")
                 SPEAKING.clear()
@@ -448,13 +456,16 @@ class Speaker:
                 x = earcon(self.out.sr) if kind == "earcon" else self.clip(text)
                 if prio == ALERT and self.chime:
                     x = np.concatenate([alert_chime(self.out.sr), x])
+                if self.fresh and self.lead_in:
+                    x = np.concatenate([np.zeros(int(self.lead_in * self.out.sr), np.float32), x])
                 if not self.cut.is_set():
                     SPEAKING.set()
+                    self.fresh = False
                     self.out.play(x, self.cut)
             except Exception as e:
                 print(f"  (tts/playback error: {e})")
                 try:
-                    self.out.close()
+                    self.close_out()
                 except Exception:
                     pass
             finally:
@@ -465,7 +476,7 @@ class Speaker:
                     self.last_said = (text.lower(), time.time())
             if idle:                              # let the speaker finish before the echo tail starts
                 try:
-                    self.out.close()
+                    self.close_out()
                 except Exception as e:
                     print(f"  (tts output close error: {e})")
 
@@ -505,12 +516,14 @@ def main():
     ap.add_argument("--speed", type=float, default=1.1)
     ap.add_argument("--out-device", default=None)
     ap.add_argument("--player", default="sounddevice", choices=["sounddevice", "aplay"])
+    ap.add_argument("--lead-in", type=float, default=LEAD_IN,
+                    help="seconds of silence before speech after idle (Bluetooth wake-up); 0 for wired")
     a = ap.parse_args()
     if a.out_device is not None and str(a.out_device).isdigit():
         a.out_device = int(a.out_device)
     if a.bench:
         return _bench(a)
-    s = Speaker(a.tts, a.voice, a.speed, a.out_device, a.player)
+    s = Speaker(a.tts, a.voice, a.speed, a.out_device, a.player, lead_in=a.lead_in)
     if a.prerender:
         return s.prerender()
     s.start(prerender=False)

@@ -50,7 +50,8 @@ class VoiceClient:
         print("Loading models...")
         self.vad, self.window = M.load_vad(threshold=a.vad)
         self.asr = M.load_asr()
-        self.tts = T.Speaker(a.tts, a.voice, a.speed, a.out_device, a.player, mute=a.mute)
+        self.tts = T.Speaker(a.tts, a.voice, a.speed, a.out_device, a.player, mute=a.mute,
+                             lead_in=a.lead_in)
         self.voices = M.load_voices()
         self.ext = M.load_speaker() if self.voices else None
         self.hp = M.HighPass()
@@ -240,6 +241,8 @@ def main():
     ap.add_argument("--voice", default=None, help="Piper voice, e.g. en_US-amy-medium (default amy-low)")
     ap.add_argument("--player", default="sounddevice", choices=["sounddevice", "aplay"],
                     help="audio output; aplay takes an ALSA name for --out-device, e.g. plughw:2,0")
+    ap.add_argument("--lead-in", type=float, default=T.LEAD_IN,
+                    help="seconds of silence before speech after idle (Bluetooth wake-up); 0 for wired")
     ap.add_argument("--earcon", action="store_true", help="beep when a command is heard, before STT")
     ap.add_argument("--no-prerender", action="store_true", help="skip pre-rendering common phrases")
     a = ap.parse_args()
