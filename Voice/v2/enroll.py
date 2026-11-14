@@ -12,7 +12,8 @@ Doc rules this follows:
   * consistency check: samples that don't agree with each other get flagged
 
   python enroll.py --name justin          # record 4 samples and save
-  python enroll.py --name justin --samples 6 --seconds 5
+  python enroll.py --name justin --samples 2 --label quiet          # quiet room
+  python enroll.py --samples 2 --label loud --add                   # noise playing, ADDS to the above
   python enroll.py --test                 # say things, see live scores (find the threshold)
   python enroll.py --show                 # what's enrolled
   python enroll.py --delete
@@ -78,36 +79,62 @@ def record_sample(cfg, mic, ext, seconds, prompt, i, total):
         return E.embed(ext, sp)
 
 
+def _paths(cfg):
+    d = cfg.VOICES_DIR
+    return (os.path.join(d, "supervisor.npy"), os.path.join(d, "supervisor_samples.npy"),
+            os.path.join(d, "supervisor.json"))
+
+
 def enroll(cfg, a):
+    mean_p, samples_p, meta_p = _paths(cfg)
+    old_embs, old_labels, name = [], [], a.name
+    if a.add:
+        if os.path.exists(samples_p) and os.path.exists(meta_p):
+            old_embs = list(np.load(samples_p))
+            meta = json.load(open(meta_p))
+            old_labels = meta.get("labels", ["?"] * len(old_embs))
+            if a.name == "supervisor":          # --name not given: keep the enrolled name
+                name = meta.get("name", a.name)
+            print(f"Adding to '{name}': {len(old_embs)} samples already saved "
+                  f"({', '.join(sorted(set(old_labels)))}).")
+        else:
+            print("Nothing saved yet (or an old enrollment without samples). Starting fresh.")
+
     ext = E.load_speaker(cfg)
     mic = Mic(a.device if a.device is not None else cfg.MIC_DEVICE)
-    print(f"Mic: {mic.name}")
-    embs = []
+    print(f"Mic: {mic.name}   Recording {a.samples} '{a.label}' samples.")
+    new = []
+    start = len(old_embs)
     for i in range(a.samples):
-        embs.append(record_sample(cfg, mic, ext, a.seconds, PROMPTS[i % len(PROMPTS)], i + 1, a.samples))
+        new.append(record_sample(cfg, mic, ext, a.seconds, PROMPTS[(start + i) % len(PROMPTS)], i + 1, a.samples))
     mic.close()
 
-    embs = np.stack(embs)
+    embs = np.stack(old_embs + new)
+    labels = old_labels + [a.label] * len(new)
     mean = embs.mean(axis=0)
     mean /= np.linalg.norm(mean) + 1e-9
     per = [E.cosine(e, mean) for e in embs]
     consistency = round(float(np.mean(per)), 3)
-    print("\nEach sample vs the average voiceprint:")
-    for i, s in enumerate(per, 1):
+    print("\nEach sample vs the combined voiceprint:")
+    for i, (s, lab) in enumerate(zip(per, labels), 1):
         flag = "   <- odd one out (noise? different voice?)" if s < consistency - 0.1 else ""
-        print(f"  sample {i}: {s:.3f}{flag}")
+        print(f"  sample {i} ({lab}): {s:.3f}{flag}")
+    for lab in sorted(set(labels)):
+        v = [s for s, l in zip(per, labels) if l == lab]
+        print(f"  average {lab}: {np.mean(v):.3f}")
     print(f"Consistency: {consistency}")
     if consistency < 0.6:
-        print("!! Low consistency. Re-run with the mic closer and less background noise.")
+        print("!! Low consistency. Re-record the odd ones with the mic closer.")
 
     os.makedirs(cfg.VOICES_DIR, exist_ok=True)
-    np.save(os.path.join(cfg.VOICES_DIR, "supervisor.npy"), mean)
-    with open(os.path.join(cfg.VOICES_DIR, "supervisor.json"), "w") as f:
-        json.dump({"name": a.name, "samples": len(embs), "seconds": a.seconds,
+    np.save(mean_p, mean)
+    np.save(samples_p, embs)
+    with open(meta_p, "w") as f:
+        json.dump({"name": name, "samples": len(embs), "labels": labels, "seconds": a.seconds,
                    "consistency": consistency, "enrolled": time.strftime("%Y-%m-%d %H:%M"),
                    "mic": mic.name}, f, indent=2)
-    print(f"\nSaved supervisor '{a.name}'. Next: python enroll.py --test")
-    print("Then restart voice: sudo systemctl restart mes-voice")
+    print(f"\nSaved supervisor '{name}' ({len(embs)} samples). Next: python enroll.py --test")
+    print("Add more later with --add. On the Pi, restart voice: sudo systemctl restart mes-voice")
 
 
 def test(cfg, a):
@@ -148,6 +175,8 @@ def main():
     ap = argparse.ArgumentParser(description="Enroll the supervisor's voice")
     ap.add_argument("--name", default="supervisor")
     ap.add_argument("--samples", type=int, default=4)
+    ap.add_argument("--add", action="store_true", help="add to the saved samples instead of replacing them")
+    ap.add_argument("--label", default="quiet", help="tag for these samples, e.g. quiet / loud")
     ap.add_argument("--seconds", type=float, default=5.0)
     ap.add_argument("--device", help="mic name piece or index")
     ap.add_argument("--test", action="store_true", help="live score vs the enrolled supervisor")
@@ -164,7 +193,7 @@ def main():
         print(json.dumps(info, indent=2) if info else "No supervisor enrolled.")
         return
     if a.delete:
-        for f in ("supervisor.npy", "supervisor.json"):
+        for f in ("supervisor.npy", "supervisor_samples.npy", "supervisor.json"):
             p = os.path.join(cfg.VOICES_DIR, f)
             if os.path.exists(p):
                 os.remove(p)
