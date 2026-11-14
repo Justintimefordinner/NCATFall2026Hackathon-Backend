@@ -5,7 +5,6 @@ then hub.publish(result). Routes hold no rules.
 """
 import json
 import os
-import threading
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 from flask_sock import Sock
@@ -22,6 +21,7 @@ app = Flask(__name__, static_folder=None)
 sock = Sock(app)
 mes = MES(config.DATA_PATH)
 hub = Hub(mes)
+hub.start_heartbeat()      # here, not in main(), so it runs under `flask run` / services too
 
 
 # ---------- helpers ----------
@@ -107,8 +107,10 @@ def state():
 # ---------- panel (HTTP fallback) ----------
 def panel_button(button_id):
     if button_id not in PANEL_INTENTS:
+        print(f"[panel] unknown button id {button_id!r}", flush=True)
         return None
     res = mes.dispatch(Command(button_id, "panel", raw=button_id))
+    print(f"[panel] {button_id} -> {res.message} (mode {mes.mode})", flush=True)
     hub.publish(res)
     return res
 
@@ -139,6 +141,7 @@ def ws_ui(ws):
 
 @sock.route("/ws/panel")
 def ws_panel(ws):
+    print("[panel] connected", flush=True)
     hub.add_panel(ws)
     try:
         while True:
@@ -148,11 +151,13 @@ def ws_panel(ws):
             except (TypeError, ValueError):
                 continue
             if msg.get("type") == "hello":
-                hub.send_to(ws, hub.lights_msg())
+                print(f"[panel] hello from {msg.get('panel') or msg.get('id')}", flush=True)
+                hub.send_lights(ws)
             elif msg.get("type") == "button":
                 panel_button(msg.get("id"))
     finally:
         hub.remove(ws)
+        print("[panel] disconnected", flush=True)
 
 
 # ---------- images and frontend ----------
@@ -177,7 +182,6 @@ def frontend_file(name):
 
 
 def main():
-    threading.Thread(target=hub.heartbeat, daemon=True).start()
     app.run(host=config.HOST, port=config.PORT, threaded=True)
 
 
