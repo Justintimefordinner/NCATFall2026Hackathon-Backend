@@ -43,7 +43,7 @@ EXTRA_PHRASES = os.path.join(HERE, "extra_phrases.txt")   # optional: one line p
 
 ALERT, CONFIRM, INFO = 1, 2, 3
 ECHO_TAIL = 0.3          # keep the mic muted this long after playback (room echo)
-LEAD_IN = 0.0            # silence before the first clip after idle; raise (e.g. 0.3) if a
+LEAD_IN = 0.15           # silence before the first clip after idle; raise (e.g. 0.3) if a
                          # Bluetooth speaker swallows the first syllable
 TARGET_RMS = 0.12        # every clip ends up this loud (before the soft limiter)
 
@@ -517,7 +517,7 @@ def main():
     ap.add_argument("--out-device", default=None)
     ap.add_argument("--player", default="sounddevice", choices=["sounddevice", "aplay"])
     ap.add_argument("--lead-in", type=float, default=LEAD_IN,
-                    help="seconds of silence before speech after idle (Bluetooth wake-up), default 0")
+                    help="seconds of silence before speech after idle (Bluetooth wake-up), default 0.15")
     a = ap.parse_args()
     if a.out_device is not None and str(a.out_device).isdigit():
         a.out_device = int(a.out_device)
