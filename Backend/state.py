@@ -11,9 +11,9 @@ import time
 
 import config
 from models import (
-    ARRIVED, BLOCKED_BY_ALERT, COMPLETE, IDLE, INSPECTOR_SIGNOFF, LISTEN_TOGGLE,
+    ALERT, ARRIVED, BLOCKED_BY_ALERT, COMPLETE, IDLE, INSPECTOR_SIGNOFF, LISTEN_TOGGLE,
     POWER, POWER_OFF, QUALITY_ACK, QUALITY_TRIGGER, RESET, SUPERVISOR_INTENTS, UNKNOWN,
-    VIEWING, WORKING, Command, LogEntry, Result,
+    INFO, VIEWING, WORKING, Command, LogEntry, Result,
 )
 from parser import normalize
 
@@ -90,9 +90,10 @@ class MES:
             return Result(True, "Already on", speak=False)
         if len(self.signed) == self.total_steps:      # was finished before going to standby
             self.mode = COMPLETE
-            return Result(True, "Operation complete")
+            return Result(True, "MES activated. Operation complete")
         self.mode = ARRIVED
-        return Result(True, "Incomplete operation. Start labor or open instructions?")
+        return Result(True, "MES activated. Incomplete operation. Start labor or open instructions?",
+                      priority=INFO)
 
     def _on_power_off(self, cmd):
         """Long press: back to standby (idle). Progress, alerts and pending
@@ -221,7 +222,7 @@ class MES:
             return Result(True, "Demo reset", speak=False)
         if cmd.intent == QUALITY_TRIGGER:
             self.quality_alert = cmd.args.get("message") or "Quality alert"
-            return Result(True, f"Quality alert: {self.quality_alert}")
+            return Result(True, f"Quality alert: {self.quality_alert}", priority=ALERT)
         if cmd.args.get("pin") != config.PIN:
             return Result(False, "Wrong PIN", speak=False)
         if cmd.intent == QUALITY_ACK:
@@ -284,6 +285,14 @@ class MES:
     def _expire_challenge(self):
         if self.challenge and time.time() > self.challenge["expires_at"]:
             self.challenge = None
+
+    # ---------- spoken-only lines ----------
+    def record_announcement(self, text, source="speak"):
+        """Log a line spoken via /api/speak so the supervisor log shows everything said."""
+        with self.lock:
+            self.log.append(LogEntry(time.time(), source, "speak", True, text))
+            if len(self.log) > config.LOG_CAP:
+                del self.log[:-config.LOG_CAP]
 
     # ---------- helpers ----------
     def _step(self, page, n):

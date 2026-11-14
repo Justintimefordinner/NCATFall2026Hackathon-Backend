@@ -24,10 +24,13 @@ if ! ls speaker_*.onnx >/dev/null 2>&1; then
   || get $REL/speaker-recongition-models/nemo_en_titanet_small.onnx speaker_titanet_small.onnx
 fi
 
-# 4) Text-to-speech: Piper "amy" (clear, low CPU)
-if [ ! -d vits-piper-en_US-amy-low ]; then
-  get $REL/tts-models/vits-piper-en_US-amy-low.tar.bz2 piper.tar.bz2
-  tar xjf piper.tar.bz2 && rm piper.tar.bz2
-fi
+# 4) Text-to-speech: Piper "amy" (clear, low CPU). Extra voices to compare by ear:
+#    PIPER_VOICES="en_US-amy-medium en_US-lessac-medium" ./download_models.sh
+for v in en_US-amy-low $PIPER_VOICES; do
+  if [ ! -d vits-piper-$v ]; then
+    get $REL/tts-models/vits-piper-$v.tar.bz2 piper.tar.bz2
+    tar xjf piper.tar.bz2 && rm piper.tar.bz2
+  fi
+done
 
 echo; echo "Models ready:"; ls -1

@@ -4,7 +4,7 @@ models.py - loads the offline sherpa-onnx models and shared audio helpers.
   ASR      : Moonshine tiny (int8)       -> speech to text
   VAD      : Silero VAD                  -> finds where speech starts/stops
   Speaker  : WeSpeaker ResNet34 / TitaNet -> voice fingerprint (who is talking)
-  TTS      : Piper (en_US amy low)       -> bench talks back
+  TTS      : Piper (en_US amy low)       -> bench talks back (see tts.py)
 """
 import glob
 import json
@@ -91,8 +91,22 @@ def embed(extractor, samples):
     return e / (np.linalg.norm(e) + 1e-9)
 
 
-def load_tts():
-    vdir = _dir("vits-piper-*", "Piper voice dir")
+def tts_voice_name(voice=None):
+    """Which Piper voice load_tts() will use, e.g. 'en_US-amy-low'."""
+    return os.path.basename(_tts_dir(voice))[len("vits-piper-"):]
+
+
+def _tts_dir(voice=None):
+    # pick a voice with --voice or PIPER_VOICE (e.g. en_US-amy-medium); default: amy-low if present
+    voice = voice or os.environ.get("PIPER_VOICE")
+    if voice:
+        return _dir(f"vits-piper-{voice}*", f"Piper voice {voice}")
+    default = os.path.join(MODELS, "vits-piper-en_US-amy-low")
+    return default if os.path.isdir(default) else _dir("vits-piper-*", "Piper voice dir")
+
+
+def load_tts(voice=None):
+    vdir = _tts_dir(voice)
     base = os.path.basename(vdir)
     onnx = [p for p in glob.glob(os.path.join(vdir, "*.onnx"))]
     if not onnx:

@@ -7,16 +7,16 @@ USB mic ─► 120 Hz high-pass ─► Silero VAD ─► loudness gate ─► sp
                                                                                 │
                               POST /api/command {"text", "confidence", "source": "voice", ...}
                                                                                 ▼
-USB speaker ◄── Piper TTS ◄── {"type": "announce"} on ws://<PI>/ws/ui ◄── backend
+USB speaker ◄── tts.py ◄── {"type": "announce", "message", "priority"} on ws://<PI>/ws/ui ◄── backend
 ```
 
 ## How it follows the team doc
 | Doc rule | Where |
 |---|---|
 | Send the raw transcript to `/api/command` with `confidence` and `source: "voice"` | `VoiceClient.post` |
-| Speak **only** `announce` messages from `/ws/ui`, not the POST response | `on_ws_message` → `tts_worker` |
+| Speak **only** `announce` messages from `/ws/ui`, not the POST response | `on_ws_message` → `tts.Speaker.speak` |
 | Stop sending while `listening` is false (Listen button) | `segments()` drops audio when `listening` is false |
-| Mute STT while TTS is speaking (feedback loop) | mic ignored while speaking, plus an echo filter on the last announcement |
+| Mute STT while TTS is speaking (feedback loop) | mic ignored while `tts.SPEAKING` is set (until 300 ms after playback), plus an echo filter on the last announcement |
 
 **Extra fields for Justin:** each POST also carries `speaker`, `role` (`operator`/`supervisor`) and `speaker_score`. The backend can ignore them, or use `role` later.
 
@@ -52,6 +52,21 @@ python3 tools/fake_backend.py            # terminal 1: prints transcripts, speak
 python3 client.py --device 1             # terminal 2
 ```
 
+## Speaking (`tts.py`)
+- **Engine:** Piper amy-low through sherpa-onnx. Falls back to espeak-ng automatically if Piper is missing (`--tts espeak` to force it). Compare voices with `PIPER_VOICES="en_US-amy-medium en_US-lessac-medium" ./download_models.sh`, then `python3 tts.py --bench`; use `--voice en_US-amy-medium` only if a short sentence stays under ~1.5 s.
+- **Cache:** every clip is saved in `tts_cache/` (git-ignored), keyed by voice + speed + text, so changed wording re-renders on its own. About 200 common phrases (fixed replies, pages, steps, every challenge phrase) are pre-rendered in the background at startup. Add demo-specific lines (e.g. quality alerts) to `extra_phrases.txt`, one per line.
+- **Priority** (from the announce message): `1` quality alert plays a two-tone chime and interrupts anything; `2` confirmation replaces an older confirmation; `3` info waits its turn.
+- **Loudness:** every clip is normalized to the same level and silence-trimmed. `setup.sh` sets ALSA volume to 100%.
+- **Earcon:** `--earcon` beeps as soon as an enrolled voice finishes a command, before STT.
+- **Pi 5 has no headphone jack:** use a USB speaker (or HDMI). Find it with `--devices`, pass `--out-device N`. If `sounddevice` output stutters, try `--player aplay --out-device plughw:2,0`.
+
+```bash
+python3 tts.py --say "Labor started" --out-device 2     # is the speaker audible?
+python3 tts.py --bench                                   # synth time per installed voice
+python3 tts.py --demo --out-device 2                     # an alert should cut off "Step 3 signed off"
+```
+With `tools/fake_backend.py`, type `a` + Enter to fire a priority-1 alert.
+
 ## Tuning
 | Problem | Flag |
 |---|---|
@@ -62,4 +77,4 @@ python3 client.py --device 1             # terminal 2
 | Testing alone | `--open` |
 
 ## Files
-`client.py` main process · `models.py` model loading and audio helpers · `mic.py` USB mic at 16 kHz · `enroll.py` voice enrollment and test · `tools/fake_backend.py` stand-in backend
+`client.py` main process · `tts.py` speech output, cache and priority queue · `models.py` model loading and audio helpers · `mic.py` USB mic at 16 kHz · `enroll.py` voice enrollment and test · `tools/fake_backend.py` stand-in backend

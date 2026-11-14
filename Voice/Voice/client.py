@@ -14,7 +14,8 @@ background talkers and unknown voices never reach the backend at all.
 Pipeline:
   USB mic -> 120 Hz high-pass -> Silero VAD -> loudness gate -> speaker ID
           -> Moonshine STT -> POST /api/command
-  /ws/ui announce -> Piper TTS -> USB speaker   (mic muted while speaking)
+  /ws/ui announce -> tts.py (cache / Piper, priority queue) -> USB speaker
+                     (mic muted while tts.SPEAKING is set)
 
 Run:
   python3 client.py                         # backend on this Pi (localhost:5000)
@@ -30,9 +31,9 @@ import time
 
 import numpy as np
 import requests
-import sounddevice as sd
 
 import models as M
+import tts as T
 from mic import Mic, list_devices
 
 try:
@@ -49,7 +50,8 @@ class VoiceClient:
         print("Loading models...")
         self.vad, self.window = M.load_vad(threshold=a.vad)
         self.asr = M.load_asr()
-        self.tts = None if a.mute else M.load_tts()
+        self.tts = T.Speaker(a.tts, a.voice, a.speed, a.out_device, a.player, mute=a.mute,
+                             lead_in=a.lead_in)
         self.voices = M.load_voices()
         self.ext = M.load_speaker() if self.voices else None
         self.hp = M.HighPass()
@@ -62,10 +64,7 @@ class VoiceClient:
         # Until we hear from the backend we follow --listen-default.
         self.listening = a.listen_default
         self.ws_connected = False
-        self.say_q = queue.Queue()
-        self.speaking = threading.Event()
         self.flush = False
-        self.last_said = ("", 0.0)
         self.noise_floor = 0.003
         self.buf = np.zeros(0, np.float32)
 
@@ -84,7 +83,11 @@ class VoiceClient:
                     print(f"  [backend] listening -> {new}")
                 self.listening = new
         elif kind == "announce" and msg.get("message"):
-            self.say_q.put(msg["message"])
+            try:
+                priority = int(msg.get("priority", T.CONFIRM))
+            except (TypeError, ValueError):
+                priority = T.CONFIRM
+            self.tts.speak(msg["message"], priority)
 
     def on_ws_open(self, _ws):
         self.ws_connected = True
@@ -122,29 +125,10 @@ class VoiceClient:
         except requests.RequestException as e:
             print(f"  -> backend unreachable ({e.__class__.__name__})")
 
-    # ---------------- speaking ----------------
-    def tts_worker(self):
-        while True:
-            text = self.say_q.get()
-            print(f"  BENCH: {text}")
-            self.last_said = (text.lower(), time.time())
-            if self.tts is None:
-                continue
-            self.speaking.set()
-            try:
-                audio = self.tts.generate(text, sid=0, speed=self.a.speed)
-                sd.play(np.array(audio.samples, dtype=np.float32), audio.sample_rate,
-                        device=self.a.out_device)
-                sd.wait()
-            except Exception as e:
-                print(f"  (tts/playback error: {e})")
-            time.sleep(0.3)          # let the room echo die down
-            self.flush = True
-            self.speaking.clear()
-
+    # ---------------- speaking (tts.py) ----------------
     def is_echo(self, text):
         """True if the mic just picked up the bench's own announcement."""
-        said, t = self.last_said
+        said, t = self.tts.last_said
         if time.time() - t > 4 or not said:
             return False
         return difflib.SequenceMatcher(None, text.lower(), said).ratio() > 0.6
@@ -169,7 +153,7 @@ class VoiceClient:
                 chunk = self.mic.read(timeout=1.0)
             except queue.Empty:
                 continue
-            if self.speaking.is_set() or not self.listening:
+            if T.is_speaking() or not self.listening:
                 self.flush = True     # drop audio while talking or while Listen is off
                 continue
             if self.flush:
@@ -205,6 +189,8 @@ class VoiceClient:
             print(f"  [skip] unknown voice (best score {sscore})")
             return
         who = who or "guest"
+        if self.a.earcon:
+            self.tts.earcon()       # "heard you" before STT finishes
 
         t0 = time.time()
         text = M.transcribe(self.asr, M.normalize_level(seg))
@@ -223,11 +209,15 @@ class VoiceClient:
         self.post(text, who, role, sscore)
 
     def run(self):
-        threading.Thread(target=self.tts_worker, daemon=True).start()
+        self.tts.start(prerender=not self.a.no_prerender)
         self.start_ws()
         self.mic = Mic(self.a.device).start()
+        if self.a.out_device == self.a.device:
+            self.tts.match_rate(self.mic.rate)
         self.calibrate()
         print(f"Ready. Backend: {self.http}  listening={self.listening}  Ctrl+C to quit.\n")
+        if self.a.greeting:
+            self.tts.speak(self.a.greeting, T.INFO)    # proof the speaker works, no backend needed
         for seg in self.segments():
             try:
                 self.handle(seg)
@@ -250,11 +240,23 @@ def main():
     ap.add_argument("--snr", type=float, default=2.5, help="speech must be this many x louder than background")
     ap.add_argument("--spk-threshold", type=float, default=0.45, help="speaker match threshold")
     ap.add_argument("--speed", type=float, default=1.1, help="TTS speed")
+    ap.add_argument("--tts", default="piper", choices=["piper", "espeak"],
+                    help="TTS engine (falls back to the other if missing)")
+    ap.add_argument("--voice", default=None, help="Piper voice, e.g. en_US-amy-medium (default amy-low)")
+    ap.add_argument("--player", default="sounddevice", choices=["sounddevice", "aplay"],
+                    help="audio output; aplay takes an ALSA name for --out-device, e.g. plughw:2,0")
+    ap.add_argument("--lead-in", type=float, default=T.LEAD_IN,
+                    help="seconds of silence before speech after idle (Bluetooth wake-up), default 0.15")
+    ap.add_argument("--greeting", default=T.GREETING,
+                    help='said once at startup when ready ("" to turn off)')
+    ap.add_argument("--earcon", action="store_true", help="beep when a command is heard, before STT")
+    ap.add_argument("--no-prerender", action="store_true", help="skip pre-rendering common phrases")
     a = ap.parse_args()
     if a.devices:
         return list_devices()
     to_dev = lambda d: int(d) if d is not None and str(d).isdigit() else d
-    a.device, a.out_device = to_dev(a.device), to_dev(a.out_device)
+    a.device = to_dev(a.device)
+    a.out_device = a.out_device if a.player == "aplay" else to_dev(a.out_device)
     try:
         VoiceClient(a).run()
     except KeyboardInterrupt:

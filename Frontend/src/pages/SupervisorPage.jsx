@@ -15,6 +15,7 @@ import {
   Send,
   ShieldCheck,
   Terminal,
+  Volume2,
 } from "lucide-react";
 
 import { useMES } from "../context/MESContext";
@@ -43,6 +44,8 @@ function SupervisorPage() {
   const [pin, setPin] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [debugCommand, setDebugCommand] = useState("");
+  const [speakText, setSpeakText] = useState("");
+  const [speakPriority, setSpeakPriority] = useState("3");
   const [actionFeedback, setActionFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -406,6 +409,24 @@ function SupervisorPage() {
     setActionFeedback(result?.message || "Command submitted.");
 
     if (result?.ok) setDebugCommand("");
+  }
+
+  // Speech only: the bench says the text, MES state doesn't change.
+  async function handleSpeak(event) {
+    event.preventDefault();
+
+    if (!speakText.trim()) return;
+
+    const result = await postAction("/api/speak", {
+      text: speakText.trim(),
+      priority: Number(speakPriority),
+    });
+
+    if (result?.ok) setSpeakText("");
+  }
+
+  async function handleTestSpeaker() {
+    await postAction("/api/speak", { text: "MES activated", priority: 2 });
   }
 
   async function handleReset() {
@@ -772,6 +793,53 @@ function SupervisorPage() {
               <Send size={15} />
               Send Command
             </button>
+          </form>
+
+          <h2
+            style={{
+              ...styles.cardTitle,
+              marginTop: isKiosk ? "8px" : "16px",
+            }}
+          >
+            <Volume2 size={18} />
+            Speaker Test
+          </h2>
+
+          <form onSubmit={handleSpeak}>
+            <input
+              style={styles.input}
+              placeholder="Text for the bench to say"
+              aria-label="Text to speak"
+              value={speakText}
+              onChange={(event) => setSpeakText(event.target.value)}
+            />
+
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              <select
+                style={{ ...styles.input, width: "auto", marginBottom: 0 }}
+                aria-label="Speech priority"
+                value={speakPriority}
+                onChange={(event) => setSpeakPriority(event.target.value)}
+              >
+                <option value="1">Alert (interrupts)</option>
+                <option value="2">Confirmation</option>
+                <option value="3">Info</option>
+              </select>
+
+              <button type="submit" style={styles.button} disabled={isSubmitting}>
+                <Volume2 size={15} />
+                Speak
+              </button>
+
+              <button
+                type="button"
+                style={{ ...styles.button, ...styles.successButton }}
+                disabled={isSubmitting}
+                onClick={handleTestSpeaker}
+              >
+                Test Speaker
+              </button>
+            </div>
           </form>
         </section>
 

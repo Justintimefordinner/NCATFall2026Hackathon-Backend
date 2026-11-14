@@ -50,16 +50,27 @@ class Hub:
             self._try_send(self.panels, ws, [self.lights_msg()])
 
     # ---------- broadcast ----------
+    @staticmethod
+    def announce_msg(text, priority):
+        return json.dumps({"type": "announce", "message": text, "priority": priority})
+
     def publish(self, result=None):
         announce = None
         if result is not None and result.speak:
-            announce = json.dumps({"type": "announce", "message": result.message})
+            announce = self.announce_msg(result.message, result.priority)
         with self.lock:
             # panels first: a tiny message, and the physical lights should feel instant
             lights = self.lights_msg()
             for ws in list(self.panels):
                 self._try_send(self.panels, ws, [lights])
             msgs = [self.state_msg()] + ([announce] if announce else [])
+            for ws in list(self.ui):
+                self._try_send(self.ui, ws, msgs)
+
+    def announce(self, text, priority):
+        """Speech only (POST /api/speak): an announce plus fresh state so the log updates."""
+        with self.lock:
+            msgs = [self.state_msg(), self.announce_msg(text, priority)]
             for ws in list(self.ui):
                 self._try_send(self.ui, ws, msgs)
 
