@@ -213,3 +213,19 @@ def test_challenge_over_http():
     assert r["state"]["last"]["score"] == 0.82
     bad = c.post("/api/command", json={"text": "x", "speaker_score": "loud"})
     assert bad.status_code == 400
+
+
+# ---------- Voice v2: speaker_score only, no role ----------
+def test_v2_score_without_role_counts_as_supervisor():
+    from models import Command
+    from state import MES
+    m = MES(config.DATA_PATH)
+    hi = Command("power", "voice", speaker_score=config.SUPERVISOR_VOICE_THRESHOLD)
+    m.dispatch(hi)
+    assert hi.role == "supervisor"
+    lo = Command("power", "voice", speaker_score=config.SUPERVISOR_VOICE_THRESHOLD - 0.01)
+    m.dispatch(lo)
+    assert lo.role is None
+    tagged = Command("power", "voice", role="operator", speaker_score=0.99)
+    m.dispatch(tagged)
+    assert tagged.role == "operator"          # an explicit role from v1 is never overridden
