@@ -183,7 +183,9 @@ def earcon(sr):
 # ---------------- phrases worth pre-rendering ----------------
 # Copied from Backend/state.py (the voice process never imports backend code).
 # A phrase missing here still works: it's synthesized live once, then cached.
+GREETING = "M E S activated"     # spelled out so Piper says the letters, not "mess"
 FIXED = [
+    GREETING,
     "Try again", "Operation complete", "Incomplete operation. Start labor or open instructions?",
     "Station off", "Listening on", "Listening off", "Labor started", "Labor already running",
     "Labor is not running", "Labor stopped. Operation complete", "Labor stopped. Operation incomplete",

@@ -214,6 +214,8 @@ class VoiceClient:
         self.mic = Mic(self.a.device).start()
         self.calibrate()
         print(f"Ready. Backend: {self.http}  listening={self.listening}  Ctrl+C to quit.\n")
+        if self.a.greeting:
+            self.tts.speak(self.a.greeting, T.INFO)    # proof the speaker works, no backend needed
         for seg in self.segments():
             try:
                 self.handle(seg)
@@ -243,6 +245,8 @@ def main():
                     help="audio output; aplay takes an ALSA name for --out-device, e.g. plughw:2,0")
     ap.add_argument("--lead-in", type=float, default=T.LEAD_IN,
                     help="seconds of silence before speech after idle (Bluetooth wake-up), default 0.15")
+    ap.add_argument("--greeting", default=T.GREETING,
+                    help='said once at startup when ready ("" to turn off)')
     ap.add_argument("--earcon", action="store_true", help="beep when a command is heard, before STT")
     ap.add_argument("--no-prerender", action="store_true", help="skip pre-rendering common phrases")
     a = ap.parse_args()
