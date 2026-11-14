@@ -57,6 +57,21 @@ function SupervisorPage() {
   const qualityAlert = mesState?.quality_alert ?? null;
   const commandLog = mesState?.log ?? [];
 
+  // ========================================
+  // CURRENT PAGE SUPERVISOR CHECKPOINTS
+  // ========================================
+
+  // Flask currently includes step metadata for the active page only.
+  // Keep the overall operation progress accurate, and display precise
+  // supervisor checkpoint positions on a separate current-page track.
+  const currentPage = mesState?.page ?? {};
+  const pageSteps = currentPage.steps ?? [];
+  const checkpointSteps = pageSteps.filter((step) => step.inspector_required);
+  const pageSignedCount = pageSteps.filter((step) => step.signed).length;
+  const pageProgressPercent = pageSteps.length
+    ? (pageSignedCount / pageSteps.length) * 100
+    : 0;
+
   const progressPercent =
     progress.total > 0
       ? Math.round((progress.signed / progress.total) * 100)
@@ -178,6 +193,36 @@ function SupervisorPage() {
       width: `${progressPercent}%`,
       backgroundColor: "#22C55E",
       transition: "width 0.3s ease",
+    },
+
+    // ========================================
+    // CURRENT PAGE CHECKPOINT BAR
+    // ========================================
+
+    checkpointTrack: {
+      position: "relative",
+      height: "12px",
+      backgroundColor: "#334155",
+      borderRadius: "999px",
+      marginTop: "12px",
+      overflow: "visible",
+    },
+
+    checkpointFill: {
+      height: "100%",
+      width: `${pageProgressPercent}%`,
+      backgroundColor: "#2563EB",
+      borderRadius: "999px",
+      transition: "width 0.3s ease",
+    },
+
+    checkpointLegend: {
+      display: "flex",
+      gap: "12px",
+      flexWrap: "wrap",
+      marginTop: "13px",
+      fontSize: "11px",
+      color: "#CBD5E1",
     },
 
     input: {
@@ -442,6 +487,92 @@ function SupervisorPage() {
             </div>
             <div style={styles.progressTrack}>
               <div style={styles.progressFill} />
+            </div>
+
+            {/* =====================================
+                CURRENT PAGE APPROVAL CHECKPOINTS
+                ===================================== */}
+            <div style={{ marginTop: "19px" }}>
+              <div style={styles.statLabel}>
+                Page {currentPage.number ?? "—"} checkpoints: {pageSignedCount}/
+                {pageSteps.length} steps
+              </div>
+
+              <div
+                style={styles.checkpointTrack}
+                role="img"
+                aria-label={`Page ${currentPage.number ?? "current"} progress, ${pageSignedCount} of ${pageSteps.length} steps signed. ${checkpointSteps.length} supervisor checkpoints.`}
+              >
+                <div style={styles.checkpointFill} />
+
+                {checkpointSteps.map((step) => {
+                  const index = pageSteps.findIndex(
+                    (item) => item.number === step.number,
+                  );
+                  const position = ((index + 1) / pageSteps.length) * 100;
+                  const pending =
+                    step.pending_inspector ||
+                    pendingInspector.some(
+                      (item) =>
+                        item.page === currentPage.number &&
+                        item.step === step.number,
+                    );
+                  const approved =
+                    step.signed && step.signed_by === "supervisor";
+                  const color = approved
+                    ? "#22C55E"
+                    : pending
+                      ? "#EF4444"
+                      : "#FBBF24";
+                  const status = approved
+                    ? "approved"
+                    : pending
+                      ? "approval pending"
+                      : "approval upcoming";
+
+                  return (
+                    <div
+                      key={`checkpoint-${currentPage.number}-${step.number}`}
+                      title={`Step ${step.number}: ${status}`}
+                      style={{
+                        position: "absolute",
+                        left: `${position}%`,
+                        top: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: isKiosk ? "15px" : "18px",
+                        height: isKiosk ? "15px" : "18px",
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        border: "3px solid #111D30",
+                        boxShadow: `0 0 0 1px ${color}`,
+                        boxSizing: "border-box",
+                        zIndex: 1,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              <div style={styles.checkpointLegend}>
+                <span>🟡 Upcoming</span>
+                <span>🔴 Pending</span>
+                <span>🟢 Approved</span>
+              </div>
+
+              {checkpointSteps.length === 0 && (
+                <div style={{ ...styles.statLabel, marginTop: "9px" }}>
+                  No supervisor checkpoints on this page.
+                </div>
+              )}
+
+              {checkpointSteps.length > 0 && (
+                <div style={{ ...styles.statLabel, marginTop: "9px" }}>
+                  Supervisor required:{" "}
+                  {checkpointSteps
+                    .map((step) => `Step ${step.number}`)
+                    .join(", ")}
+                </div>
+              )}
             </div>
           </div>
         </section>

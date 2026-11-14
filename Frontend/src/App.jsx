@@ -99,6 +99,16 @@ function App() {
   } = useMES();
 
   // ========================================
+  // SUPERVISOR APPROVAL STATUS
+  // ========================================
+
+  const pendingInspector = mesState?.pending_inspector ?? [];
+
+  const supervisorApprovalRequired = pendingInspector.length > 0;
+
+  const pendingApproval = pendingInspector[0] ?? null;
+
+  // ========================================
   // STYLING
   // ========================================
 
@@ -321,17 +331,61 @@ function App() {
       </div>
 
       {/* =====================================
-          SUPERVISOR DASHBOARD NAVIGATION
+        CONDITIONAL SUPERVISOR APPROVAL
       ===================================== */}
-      <div style={styles.supervisorRow}>
-        <button
-          type="button"
-          style={styles.supervisorButton}
-          onClick={() => navigate("/supervisor")}
+
+      {supervisorApprovalRequired && (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: isKiosk ? "6px 8px" : "12px 20px",
+            backgroundColor: "#451A1A",
+            borderTop: "1px solid #EF4444",
+            borderBottom: "1px solid #EF4444",
+            display: "flex",
+            flexDirection: "column",
+            gap: isKiosk ? "5px" : "10px",
+          }}
         >
-          {isKiosk ? "Supervisor Dashboard" : "Open Supervisor Dashboard"}
-        </button>
-      </div>
+          {/* SUPERVISOR NOTIFICATION */}
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              color: "#FCA5A5",
+              fontSize: isKiosk ? "11px" : "14px",
+              fontWeight: "bold",
+              textAlign: "center",
+            }}
+          >
+            🔒 Supervisor Approval Required — Page {pendingApproval.page}, Step{" "}
+            {pendingApproval.step}
+          </div>
+
+          {/* SUPERVISOR BUTTON */}
+          <button
+            type="button"
+            onClick={() => navigate("/supervisor")}
+            style={{
+              width: "100%",
+              minHeight: isKiosk ? "30px" : "44px",
+              borderRadius: "7px",
+              border: "1px solid #EF4444",
+              backgroundColor: "#B91C1C",
+              color: "#FFFFFF",
+              fontSize: isKiosk ? "11px" : "14px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              touchAction: "manipulation",
+            }}
+          >
+            Supervisor Approval — Enter PIN
+          </button>
+        </div>
+      )}
 
       {/* =====================================
           BOTTOM NAVIGATION BAR
