@@ -60,7 +60,7 @@ TTS_ENGINE = "auto"            # "auto" (Piper, else espeak-ng), "piper", "espea
 TTS_SPEED = 1.1
 TTS_TAIL = 0.4                 # keep the mic muted this long after the bench stops talking
 TTS_VOICE = None               # Piper voice, e.g. "en_US-lessac-medium". None = amy-low
-TTS_LEAD_IN = 0.15             # silence before speech after idle (speaker wake-up)
+TTS_LEAD_IN = 0.3              # silence before speech after idle (Bluetooth speaker wake-up)
 TTS_PLAYER = "sounddevice"     # or "aplay" (then SPEAKER_DEVICE is an ALSA name like plughw:2,0)
 TTS_PRERENDER = True           # cache common phrases at startup (Voice/Voice/tts_cache)
 GREETING = "MES activated"     # said once when ready; "" to turn off

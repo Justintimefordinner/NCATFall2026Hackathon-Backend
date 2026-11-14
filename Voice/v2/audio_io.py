@@ -121,6 +121,30 @@ def pick_output(device=None):
 
 
 # ---------------- microphone ----------------
+class AntiAlias:
+    """Low-pass at 7.2 kHz before dropping a 44.1/48 kHz mic to 16 kHz. Without it, hiss and
+    fan noise above 8 kHz fold down into the speech band and hurt Moonshine. Keeps filter state
+    across chunks so there are no clicks at chunk edges. No-op without scipy or at 16 kHz."""
+
+    def __init__(self, rate, cutoff=7200.0):
+        self.sos = None
+        if rate <= SR:
+            return
+        try:
+            from scipy.signal import butter, sosfilt, sosfilt_zi
+            self.sos = butter(8, cutoff / (rate / 2), btype="low", output="sos")
+            self.zi = sosfilt_zi(self.sos) * 0.0
+            self.sosfilt = sosfilt
+        except Exception:
+            self.sos = None
+
+    def __call__(self, x):
+        if self.sos is None:
+            return x
+        y, self.zi = self.sosfilt(self.sos, x, zi=self.zi)
+        return y.astype(np.float32)
+
+
 class Mic:
     """16 kHz mono float32 chunks, whatever rate the hardware really runs at."""
 
@@ -139,6 +163,7 @@ class Mic:
         except Exception:
             rate = int(sd.query_devices(self.index, "input")["default_samplerate"])
         self.rate = rate
+        self.aa = AntiAlias(rate)
         self.stream = sd.InputStream(device=self.index, channels=1, samplerate=rate, dtype="float32",
                                      blocksize=int(rate * self.chunk_sec), callback=self._cb)
         self.stream.start()
@@ -158,7 +183,7 @@ class Mic:
                 self._recover()
             raise
         self.last_chunk = time.time()
-        return resample(x, self.rate, SR)
+        return resample(self.aa(x), self.rate, SR)
 
     def _recover(self):
         print("  [mic] no audio for 3 s, reopening the mic...")
