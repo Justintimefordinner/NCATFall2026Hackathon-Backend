@@ -45,7 +45,7 @@ def test_walkthrough_over_http(client):
 def test_state_shape(client):
     s = client.get("/api/state").get_json()
     assert set(s) == {"operation", "mode", "listening", "labor", "page", "pending_inspector",
-                      "progress", "quality_alert", "last", "log"}
+                      "progress", "quality_alert", "supervisor_challenge", "last", "log"}
     assert s["page"]["steps"][0]["image"] == "/static/img/p1s1.jpg"
 
 

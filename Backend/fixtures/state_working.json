@@ -59,48 +59,55 @@
     "total": 6
   },
   "quality_alert": null,
+  "supervisor_challenge": null,
   "last": {
-    "ts": 1794633407.8373744,
+    "ts": 1794656643.7344859,
     "source": "voice",
     "input": "step two done",
     "ok": false,
-    "message": "This step requires supervisor sign-off"
+    "message": "This step requires supervisor sign-off",
+    "score": null
   },
   "log": [
     {
-      "ts": 1794633407.8373477,
+      "ts": 1794656643.7344563,
       "source": "panel",
       "input": "power",
       "ok": true,
-      "message": "Incomplete operation. Start labor or open instructions?"
+      "message": "Incomplete operation. Start labor or open instructions?",
+      "score": null
     },
     {
-      "ts": 1794633407.8373573,
+      "ts": 1794656643.7344651,
       "source": "panel",
       "input": "listen_toggle",
       "ok": true,
-      "message": "Listening on"
+      "message": "Listening on",
+      "score": null
     },
     {
-      "ts": 1794633407.8373625,
+      "ts": 1794656643.7344706,
       "source": "voice",
       "input": "start labor",
       "ok": true,
-      "message": "Labor started"
+      "message": "Labor started",
+      "score": null
     },
     {
-      "ts": 1794633407.83737,
+      "ts": 1794656643.73448,
       "source": "voice",
       "input": "step one done",
       "ok": true,
-      "message": "Step 1 signed off"
+      "message": "Step 1 signed off",
+      "score": null
     },
     {
-      "ts": 1794633407.8373744,
+      "ts": 1794656643.7344859,
       "source": "voice",
       "input": "step two done",
       "ok": false,
-      "message": "This step requires supervisor sign-off"
+      "message": "This step requires supervisor sign-off",
+      "score": null
     }
   ]
 }

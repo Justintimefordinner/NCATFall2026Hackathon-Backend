@@ -54,6 +54,7 @@
     "total": 6
   },
   "quality_alert": null,
+  "supervisor_challenge": null,
   "last": null,
   "log": []
 }

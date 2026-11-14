@@ -276,9 +276,10 @@ class MES:
 
 Still to write: `reset()` (reload JSON, set every field to its start value), `_step()`, `_sign()`, `_pick_pending()`, `_log()`, `total_steps`, `snapshot()` and `lights()`. `_log()` appends a `LogEntry` with `cmd.raw` or the intent name as `input`.
 
-Four details that matter:
+Five details that matter:
 
 - **Inspector steps are gates.** The tech can't move past an inspector step until the supervisor signs it. `sign_step` on any later step (same page or a later page) is refused, `sign_page` signs in order and stops at the inspector step, and `next_page` is refused while `working` if the current or an earlier page has an unsigned inspector step. Reading ahead in `viewing` is still allowed. Hitting a gate adds that step to `pending_inspector` so it shows up on the supervisor screen.
+- **Supervisor can sign off or clear an alert by voice, with a spoken challenge.** "supervisor confirm" / "supervisor sign off" / "inspector sign off" (with a step pending) or "clear quality alert" / "clear alert" / "acknowledge alert" (with an alert open), from a voice the voice process tags `role: "supervisor"`, opens `supervisor_challenge = {phrase, action, expires_at}` and announces "Supervisor, confirm with: <phrase>". The next voice utterance is the answer, whatever it says: it passes only if it contains the phrase, comes from the supervisor role with `speaker_score >= config.SUPERVISOR_VOICE_THRESHOLD`, and arrives within `config.CHALLENGE_TTL` (15 s). A pass runs the same code as the PIN route; anything else closes the challenge with "Supervisor voice not recognized". The tech saying "clear alert" still gets "Quality alert open. Supervisor must clear it". Non-voice inputs don't consume a challenge, and the PIN routes are unchanged. Supervisor speech and challenge answers are logged as `source: "supervisor_voice"` with the speaker score.
 - **`_after_sign` runs on every sign path**, including supervisor sign-off, so a supervisor PIN on the last inspector step finishes the assembly.
 - **Supervisor sign-off is not blocked by a quality alert.** Check 4 runs before check 5. If the team wants alerts to block inspector sign-offs too, add a check inside `_supervisor`.
 - **Keep `dispatch` fast.** No network or audio calls inside the lock. `app.py` broadcasts after `dispatch` returns.
