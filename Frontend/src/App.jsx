@@ -14,6 +14,12 @@ import LaborTimer from "./components/LaborTimer";
 import VoiceControl from "./components/VoiceControl";
 
 // ========================================
+// POWER SCREEN COMPONENT
+// ========================================
+
+import PowerScreen from "./components/PowerScreen";
+
+// ========================================
 // RESPONSIVE HOOK
 // ========================================
 
@@ -34,6 +40,8 @@ function App() {
   // ROUTER NAVIGATION
   // ========================================
 
+  // Navigate between technician and
+  // supervisor dashboards.
   const navigate = useNavigate();
 
   // ========================================
@@ -42,7 +50,7 @@ function App() {
 
   const { isMobile, isCompact, isSmallHeight } = useResponsive();
 
-  // Enable compact Raspberry Pi layout.
+  // Enable Raspberry Pi kiosk layout.
   const isKiosk = isCompact && isSmallHeight;
 
   // ========================================
@@ -69,11 +77,14 @@ function App() {
     isListening,
     feedback,
 
+    // Power activation
+    handlePowerOn,
+
     // Labor commands
     handleStartLabor,
     handleStopLabor,
 
-    // Page navigation commands
+    // Page navigation
     handlePreviousPage,
     handleNextPage,
 
@@ -116,7 +127,7 @@ function App() {
       flexShrink: 0,
     },
 
-    // Initial loading screen
+    // Initial backend loading screen
     loading: {
       width: "100%",
       height: "100dvh",
@@ -127,9 +138,9 @@ function App() {
       alignItems: "center",
       justifyContent: "center",
       gap: "12px",
+      padding: "20px",
       fontFamily: "Arial, sans-serif",
       textAlign: "center",
-      padding: "20px",
       boxSizing: "border-box",
     },
 
@@ -155,7 +166,7 @@ function App() {
       padding: isKiosk ? "0 8px 6px" : isCompact ? "0 8px 8px" : "0 20px 16px",
     },
 
-    // Supervisor button row
+    // Supervisor dashboard button row
     supervisorRow: {
       display: "flex",
       alignItems: "center",
@@ -187,8 +198,12 @@ function App() {
   // INITIAL BACKEND LOADING STATE
   // ========================================
 
-  // Wait until Flask provides the first
+  // Wait for Flask to provide the first
   // manufacturing operation snapshot.
+  //
+  // This prevents incomplete operation
+  // information from appearing at startup.
+
   if (!mesState) {
     return (
       <div style={styles.loading}>
@@ -221,7 +236,27 @@ function App() {
   }
 
   // ========================================
-  // RETURN / JSX
+  // SYSTEM STANDBY / POWER SCREEN
+  // ========================================
+
+  // Flask controls the actual MES mode.
+  //
+  // When the backend reports IDLE,
+  // the technician dashboard is hidden.
+  //
+  // Pressing Power calls the backend,
+  // which transitions IDLE -> ARRIVED.
+  //
+  // Once the updated state is received,
+  // React automatically renders the
+  // normal technician dashboard.
+
+  if (mesState.mode === "idle") {
+    return <PowerScreen onPowerOn={handlePowerOn} connected={connected} />;
+  }
+
+  // ========================================
+  // MAIN TECHNICIAN DASHBOARD
   // ========================================
 
   return (
@@ -276,7 +311,7 @@ function App() {
           feedback={feedback}
         />
 
-        {/* LABOR CLOCK */}
+        {/* LABOR TIMER */}
         <LaborTimer
           isLaborRunning={isLaborRunning}
           elapsedSeconds={elapsedSeconds}
