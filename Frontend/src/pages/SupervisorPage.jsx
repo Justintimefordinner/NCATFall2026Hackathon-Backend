@@ -20,6 +20,7 @@ import {
 
 import { useMES } from "../context/MESContext";
 import { useResponsive } from "../hooks/useResponsive";
+import SupervisorChallenge from "../components/SupervisorChallenge";
 
 // ========================================
 // SUPERVISOR PAGE COMPONENT
@@ -39,7 +40,14 @@ function SupervisorPage() {
 
   const navigate = useNavigate();
 
-  const { mesState, connected, error, elapsedSeconds, sendCommand } = useMES();
+  const {
+    mesState,
+    connected,
+    error,
+    elapsedSeconds,
+    sendCommand,
+    supervisorChallenge,
+  } = useMES();
 
   const [pin, setPin] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -633,6 +641,8 @@ function SupervisorPage() {
             <ShieldCheck size={18} />
             Inspector Sign-Off
           </h2>
+
+          <SupervisorChallenge challenge={supervisorChallenge} compact={isKiosk} />
 
           <input
             type="password"

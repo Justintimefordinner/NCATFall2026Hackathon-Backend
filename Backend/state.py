@@ -257,10 +257,14 @@ class MES:
 
     # ---------- supervisor voice ----------
     def _on_supervisor_confirm(self, cmd):
-        if cmd.role != SUPERVISOR:
-            return Result(False, "Supervisor must sign off")
         if not self.pending_inspector:
             return Result(False, "No step waiting on inspector")
+        if cmd.role != SUPERVISOR:
+            # voice: the speaker didn't match the enrolled supervisor strongly enough;
+            # screens/debug: there's no voice to check at all. Either way, the PIN works.
+            if cmd.source == "voice":
+                return Result(False, "Supervisor voice not recognized. Use the supervisor PIN")
+            return Result(False, "Supervisor PIN required")
         return self._open_challenge(SIGNOFF)
 
     def _on_clear_alert(self, cmd):
@@ -405,9 +409,11 @@ class MES:
 
     def _challenge_view(self):
         ch = self.challenge
-        if ch is None or time.time() > ch["expires_at"]:
+        now = time.time()
+        if ch is None or now > ch["expires_at"]:
             return None
-        return dict(ch)
+        # seconds_left lets screens count down without trusting their own clock
+        return {**ch, "seconds_left": max(0, int(ch["expires_at"] - now))}
 
     def lights(self):
         """Panel LED states for the ESP32."""

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SupervisorChallenge from "./components/SupervisorChallenge";
 
 // ========================================
 // DASHBOARD COMPONENT IMPORTS
@@ -96,6 +97,10 @@ function App() {
     // Voice controls
     handleToggleListening,
     handleVoiceCommand,
+
+    // Supervisor sign-off
+    handleSupervisorSignoff,
+    supervisorChallenge,
   } = useMES();
 
   // ========================================
@@ -104,15 +109,36 @@ function App() {
 
   const pendingInspector = mesState?.pending_inspector ?? [];
 
-  // Show the prompt only for the selected pending step.
+  // Prefer the selected step if it's pending; otherwise the oldest pending
+  // step. The tech can't continue past it, so always show the prompt.
   const selectedPendingApproval =
     pendingInspector.find(
       (item) =>
         Number(item.page) === Number(currentPage) &&
         Number(item.step) === Number(selectedStep),
-    ) ?? null;
+    ) ??
+    pendingInspector[0] ??
+    null;
 
   const supervisorApprovalRequired = Boolean(selectedPendingApproval);
+
+  const [supervisorPin, setSupervisorPin] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+
+  const handleApprove = async (event) => {
+    event.preventDefault();
+    if (!supervisorPin.trim() || isApproving || !selectedPendingApproval) return;
+    setIsApproving(true);
+    const result = await handleSupervisorSignoff(
+      supervisorPin.trim(),
+      selectedPendingApproval.page,
+      selectedPendingApproval.step,
+    );
+    setIsApproving(false);
+    // Clear on success and on a wrong PIN, so a PIN never lingers on screen.
+    setSupervisorPin("");
+    return result;
+  };
 
   // ========================================
   // STYLING
@@ -371,25 +397,81 @@ function App() {
             {selectedPendingApproval.page}, Step {selectedPendingApproval.step}
           </div>
 
-          {/* SUPERVISOR BUTTON */}
-          <button
-            type="button"
-            onClick={() => navigate("/supervisor")}
+          {/* SPOKEN CHALLENGE (after the supervisor says "supervisor confirm") */}
+          <SupervisorChallenge challenge={supervisorChallenge} compact={isKiosk} />
+
+          <div
             style={{
-              width: "100%",
-              minHeight: "clamp(26px, 5vh, 40px)",
-              borderRadius: "7px",
-              border: "1px solid #FECACA",
-              backgroundColor: "#DC2626",
-              color: "#FFFFFF",
-              fontSize: isKiosk ? "11px" : "14px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              touchAction: "manipulation",
+              textAlign: "center",
+              color: "#7F1D1D",
+              fontSize: isKiosk ? "10px" : "12px",
             }}
           >
-            Supervisor Approval — Enter PIN
-          </button>
+            Supervisor: say “supervisor confirm”, or enter your PIN.
+          </div>
+
+          {/* SUPERVISOR PIN */}
+          <form
+            onSubmit={handleApprove}
+            style={{ display: "flex", gap: "6px", alignItems: "stretch" }}
+          >
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Supervisor PIN"
+              aria-label="Supervisor PIN"
+              value={supervisorPin}
+              onChange={(event) => setSupervisorPin(event.target.value)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: "clamp(26px, 5vh, 40px)",
+                padding: "0 10px",
+                borderRadius: "7px",
+                border: "1px solid #FECACA",
+                fontSize: isKiosk ? "12px" : "15px",
+                boxSizing: "border-box",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!supervisorPin.trim() || isApproving}
+              style={{
+                minHeight: "clamp(26px, 5vh, 40px)",
+                padding: "0 14px",
+                borderRadius: "7px",
+                border: "1px solid #FECACA",
+                backgroundColor: "#DC2626",
+                color: "#FFFFFF",
+                fontSize: isKiosk ? "11px" : "14px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                touchAction: "manipulation",
+                opacity: !supervisorPin.trim() || isApproving ? 0.6 : 1,
+              }}
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/supervisor")}
+              style={{
+                minHeight: "clamp(26px, 5vh, 40px)",
+                padding: "0 10px",
+                borderRadius: "7px",
+                border: "1px solid #FECACA",
+                backgroundColor: "#FFFFFF",
+                color: "#DC2626",
+                fontSize: isKiosk ? "11px" : "13px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              Dashboard
+            </button>
+          </form>
         </div>
       )}
 

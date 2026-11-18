@@ -117,7 +117,26 @@ def test_supervisor_clear_alert_with_no_alert(m):
 
 def test_tech_supervisor_confirm_refused(pending):
     r = say(pending, "supervisor confirm", role="operator")
-    assert r.message == "Supervisor must sign off" and pending.challenge is None
+    assert r.message == "Supervisor voice not recognized. Use the supervisor PIN"
+    assert pending.challenge is None
+
+
+def test_weak_voice_match_supervisor_confirm_refused(pending):
+    # voice v2 sends no role: a score under the threshold isn't the supervisor
+    r = say(pending, "supervisor confirm", role=None, score=LOW)
+    assert r.ok is False and r.message.startswith("Supervisor voice not recognized")
+    assert pending.challenge is None
+
+
+def test_typed_supervisor_confirm_asks_for_pin(pending):
+    r = pending.dispatch(parse("supervisor confirm", 1.0, "debug"))
+    assert r.ok is False and r.message == "Supervisor PIN required" and pending.challenge is None
+
+
+def test_challenge_view_has_seconds_left(pending):
+    say(pending, "supervisor confirm")
+    snap = pending.snapshot()["supervisor_challenge"]
+    assert 0 < snap["seconds_left"] <= config.CHALLENGE_TTL
 
 
 # ---------- failed answers close the challenge ----------

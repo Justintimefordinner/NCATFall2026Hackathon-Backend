@@ -342,8 +342,32 @@ export function MESProvider({ children }) {
     return { ok: false, message };
   };
 
+  // Supervisor sign-off from a screen.
+  // Typed / simulated commands carry no voice, so Flask can't tell who
+  // said them and answers "Supervisor PIN required". Route them to the
+  // PIN prompt instead. Real spoken "supervisor confirm" comes from the
+  // voice process and opens the spoken challenge (supervisor_challenge).
+  const isSupervisorConfirm = (normalized) =>
+    /^(supervisor (confirm|sign off|signoff)|inspector (sign off|signoff))\b/.test(
+      normalized,
+    );
+
+  const handleSupervisorSignoff = (pin, page, step) => {
+    return postJSON("/api/inspector/signoff", { pin, page, step });
+  };
+
   const sendCommand = (text) => {
     const normalized = String(text).trim().toLowerCase();
+
+    if (isSupervisorConfirm(normalized)) {
+      const pending = mesState?.pending_inspector?.[0];
+      if (pending) {
+        const message = `Supervisor: enter PIN to approve Page ${pending.page}, Step ${pending.step}.`;
+        setFeedback(message);
+        return Promise.resolve({ ok: false, message, needsPin: true });
+      }
+    }
+
     const isContinuation =
       /^(next page|previous page|page done|sign off page|sign off step)$/.test(
         normalized,
@@ -597,6 +621,10 @@ export function MESProvider({ children }) {
     // Supervisor compatibility
     requestSupervisor,
     authorizeSupervisor,
+
+    // Supervisor sign-off (PIN) and spoken challenge
+    handleSupervisorSignoff,
+    supervisorChallenge: mesState?.supervisor_challenge ?? null,
   };
 
   // ========================================
